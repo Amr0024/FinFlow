@@ -10,7 +10,8 @@ class LoginScreen extends StatelessWidget {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email == 'finflow@gmail.com' && password == '123') {
+    //finflow@gmail.com pw: 123
+    if (email == 'aa' && password == '123') {
       // Navigate to the survey screen after successful login
       Navigator.pushReplacement(
         context,

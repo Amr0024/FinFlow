@@ -1,6 +1,8 @@
+// main_screen.dart
 import 'package:flutter/material.dart';
 import 'dart:math'; // Import for Random
 import 'notes_screen.dart'; // Import the Notes Screen
+import 'expanses_screen.dart'; // Import the new Expanses Screen
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
@@ -393,119 +395,41 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // Show a popup dialog to add expenses
-  void _showAddExpensesDialog() {
-    TextEditingController _amountController = TextEditingController();
-    String _selectedCategory = _categories[0]['name']; // Default category
-    String _trackingPreference = widget.surveyResults['How often do you want to track your expenses?'] ?? 'Monthly';
+  // Navigate to the new expanses screen
+  void _navigateToExpansesScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExpansesScreen(
+          categories: _categories,
+          onExpenseAdded: (String category, double amount, bool isNotPriority, String? productName, String? mandatoryLevel) {
+            setState(() {
+              // Subtract from Monthly Budget
+              _monthlyBudget -= amount;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          content: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _trackingPreference == 'Daily' ? 'Enter Daily Expenses' : 'Enter Monthly Expenses',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButton<String>(
-                        value: _selectedCategory,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value!;
-                          });
-                        },
-                        items: _categories.map<DropdownMenuItem<String>>((category) {
-                          return DropdownMenuItem<String>(
-                            value: category['name'],
-                            child: Row(
-                              children: [
-                                Icon(category['icon'], color: category['color']),
-                                SizedBox(width: 10),
-                                Text(category['name']),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20),
-                TextField(
-                  controller: _amountController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter Amount',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_amountController.text.isNotEmpty) {
-                      setState(() {
-                        double amount = double.parse(_amountController.text);
+              // Subtract from Category Budget (if applicable)
+              if (category != 'None') {
+                int categoryIndex = _categories.indexWhere((cat) => cat['name'] == category);
+                if (categoryIndex != -1 && _categories[categoryIndex]['budget'] > 0) {
+                  _categories[categoryIndex]['budget'] -= amount;
+                }
+              }
 
-                        // Subtract from Monthly Budget
-                        _monthlyBudget -= amount;
-
-                        int categoryIndex = _categories.indexWhere((cat) => cat['name'] == _selectedCategory);
-
-                        // Update the budget left for the category
-                        if (_categories[categoryIndex]['budget'] > 0) {
-                          _categories[categoryIndex]['budget'] -= amount;
-                        }
-
-                        // Add the expense to the category's expenses list
-                        _categories[categoryIndex]['expenses'].add({
-                          'amount': amount,
-                          'isDaily': _trackingPreference == 'Daily',
-                        });
-
-                        // Add the transaction to the recent transactions list
-                        _recentTransactions.add({
-                          'category': _selectedCategory,
-                          'amount': amount,
-                          'icon': _categories[categoryIndex]['icon'],
-                          'color': _categories[categoryIndex]['color'],
-                        });
-
-                        // Clear the input field
-                        _amountController.clear();
-                      });
-
-                      Navigator.pop(context); // Close the dialog after adding the expense
-                    }
-                  },
-                  child: Text('Add Expense'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+              // Add to Recent Transactions
+              _recentTransactions.add({
+                'category': isNotPriority && category == 'None' ? productName! : category,
+                'amount': amount,
+                'icon': isNotPriority
+                    ? Icons.remove // Unique icon for non-priority
+                    : _categories.firstWhere((cat) => cat['name'] == category)['icon'],
+                'color': isNotPriority ? Colors.grey : _categories.firstWhere((cat) => cat['name'] == category)['color'],
+                'isNotPriority': isNotPriority,
+                'productName': productName,
+              });
+            });
+          },
+        ),
+      ),
     );
   }
 
@@ -637,7 +561,7 @@ class _MainScreenState extends State<MainScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildQuickActionButton(Icons.add, 'Add Expense', Colors.blue, _showAddExpensesDialog),
+                    _buildQuickActionButton(Icons.add, 'Add Expense', Colors.blue, _navigateToExpansesScreen),
                     _buildQuickActionButton(Icons.attach_money, 'Add Income', Colors.green, () {}),
                     _buildQuickActionButton(Icons.calendar_today, 'Monthly Plan', Colors.teal, _showMonthlyPlanDialog),
                     _buildQuickActionButton(Icons.bar_chart, 'Reports', Colors.orange, () {
@@ -732,6 +656,8 @@ class _MainScreenState extends State<MainScreen> {
                       '-\$${transaction['amount'].toStringAsFixed(2)}',
                       transaction['icon'],
                       transaction['color'],
+                      transaction['isNotPriority'],
+                      transaction['productName'],
                     );
                   }).toList(),
                 ),
@@ -824,11 +750,27 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildTransactionItem(String category, String amount, IconData icon, Color color) {
+  Widget _buildTransactionItem(String category, String amount, IconData icon, Color color, bool isNotPriority, String? productName) {
     return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(category),
-      trailing: Text(amount, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      leading: Icon(
+        icon,
+        color: isNotPriority ? Colors.grey : color, // Gray icon for non-priority
+      ),
+      title: Text(
+        isNotPriority && category == 'None' ? productName! : category, // Display product name if non-priority and category is "None"
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      trailing: Text(
+        amount,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.red, // Red color for expense amounts
+        ),
+      ),
     );
   }
 
