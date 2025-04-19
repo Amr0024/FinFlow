@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'survey_screen.dart';
 import 'package:flutter/cupertino.dart';
-import 'services/firestore_service.dart';
+import 'package:projects_flutter/services/firestore_services.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -70,40 +70,57 @@ class RegisterScreen extends StatelessWidget {
     }
 
     try {
-      // 1) Create a new user in Firebase Auth
-      UserCredential userCredential =
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // ---------- 1)  create auth user ----------
+      final cred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      // 2) Store additional user data in Firestore under 'users' collection
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-        'firstName': firstName,
-        'lastName': lastName,
-        'username': userName,
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
+      final uid = cred.user!.uid;
+
+      // ---------- 2)  base profile doc ----------
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'firstName' : firstName,
+        'lastName'  : lastName,
+        'username'  : userName,
+        'email'     : email,
+        'createdAt' : FieldValue.serverTimestamp(),
       });
 
-      // 3) Navigate to SurveyScreen (or anywhere else you want)
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SurveyScreen()),
-      );
-
-      // initialise balance doc
+      // ---------- 3)  initialise balance ----------
       await FirebaseFirestore.instance
           .collection('users')
-          .doc(userCredential.user!.uid)
+          .doc(uid)
           .collection('balance')
           .doc('current')
           .set({'total': 0.0, 'monthlyBudget': 0.0});
 
+      // (optional) ---------- 4)  add a few starter categories ----------
+      await FirestoreService.addCategory(
+        name : 'Groceries',
+        color: Colors.green.value,
+        icon : Icons.shopping_cart.codePoint,
+      );
+      await FirestoreService.addCategory(
+        name : 'Bills',
+        color: Colors.blue.value,
+        icon : Icons.receipt.codePoint,
+      );
+
+      // ---------- 5)  go to Survey  ----------
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SurveyScreen()),
+      );
+
     } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration Failed: ${e.message}'), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
+      );
+    }
+    on FirebaseAuthException catch (e) {
       // Display any errors (e.g., email already in use, invalid format, etc.)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

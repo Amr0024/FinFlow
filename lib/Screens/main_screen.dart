@@ -3,9 +3,10 @@ import 'package:flutter/services.dart'; // For status bar style
 import 'dart:math'; // Import for Random
 import 'notes_screen.dart'; // Import the Notes Screen
 import 'expanses_screen.dart'; // Import the new Expenses Screen
-import 'package:FinFlow/lib/services/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'package:projects_flutter/services/firestore_services.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
@@ -29,92 +30,15 @@ class _MainScreenState extends State<MainScreen> {
   String _firstName = '';
   String _lastName = '';
 
-  // 1. Balances row ----------------------------------
-  Widget _buildBalances() {
-    return StreamBuilder(
-      stream: FirestoreService.balanceStream(),
-      builder: (_, AsyncSnapshot snap) {
-        if (!snap.hasData) return const CircularProgressIndicator();
-        final data = snap.data!.data() ?? {};
-        final total = data['total'] ?? 0.0;
-        final left  = data['monthlyBudget'] ?? 0.0;
-        return Row(
-          children: [
-            Expanded(child: _buildOverviewCard('Total Balance', 'EGP ${total.toStringAsFixed(2)}', Colors.black)),
-            const SizedBox(width: 10),
-            Expanded(child: _buildOverviewCard('Monthly Budget Left', 'EGP ${left.toStringAsFixed(2)}', Colors.black)),
-          ],
-        );
-      },
-    );
-  }
+  /// Live data pulled from Firestore
+  List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _recentTransactions = [];
 
-// 2. Category grid ---------------------------------
-  Widget _buildCategoryGrid() {
-    return StreamBuilder(
-      stream: FirestoreService.categoryStream(),
-      builder: (_, AsyncSnapshot snap) {
-        if (!snap.hasData) return const CircularProgressIndicator();
-        final docs = snap.data!.docs as List<QueryDocumentSnapshot<Map<String,dynamic>>>;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 20,
-          children: [
-            ...docs.map((doc) {
-              final d = doc.data();
-              return GestureDetector(
-                onTap: () => _showBudgetDialog(doc.id, d),
-                child: _buildCategoryBox(
-                  d['name'],
-                  IconData(d['icon'], fontFamily: 'MaterialIcons'),
-                  Color(d['color']),
-                  d['budget'] > 0 ? 'LE${(d['budget'] as num).toStringAsFixed(2)}' : '',
-                ),
-              );
-            }),
-            GestureDetector(
-              onTap: _showAddCategoryDialog,
-              child: _buildCategoryBox('Add', Icons.add, Colors.grey, ''),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-// 3. Recent transaction list ------------------------
-  Widget _buildRecentTx() {
-    return StreamBuilder(
-      stream: FirestoreService.recentTxStream(20),
-      builder: (_, AsyncSnapshot snap) {
-        if (!snap.hasData) return const CircularProgressIndicator();
-        final docs = snap.data!.docs as List<QueryDocumentSnapshot<Map<String,dynamic>>>;
-        return Column(
-          children: docs
-              .where((doc) => _selectedFilter == 'All' ||
-              (doc.data()['catIdName'] ?? '') == _selectedFilter)
-              .map((doc) {
-            final d = doc.data();
-            final amt  = d['amount'] as num;
-            final sign = amt > 0 ? '+' : '-';
-            return _buildTransactionItem(
-              d['catIdName'] ?? d['productName'] ?? 'Uncategorised',
-              '$signLE${amt.abs().toStringAsFixed(2)}',
-              amt > 0 ? Icons.arrow_downward : Icons.arrow_upward,
-              amt > 0 ? Colors.green         : Colors.red,
-              d['notPriority'] ?? false,
-              d['productName'],
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
-
-  // Categories
-
-  // Recent transactions
+  double _totalBalance   = 0.0;   // from balance/current
+  double _monthlyBudget  = 0.0;   // idem
+  StreamSubscription? _catSub;
+  StreamSubscription? _balSub;
+  StreamSubscription? _trxSub;
 
   String _selectedFilter = 'All';
 
@@ -140,10 +64,34 @@ class _MainScreenState extends State<MainScreen> {
         // handle errors
       });
     }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+
+      // --- Categories stream ---
+      _catSub = FirestoreService.streamCategories().listen((cats) {
+        setState(() => _categories = cats);
+      });
+
+      // --- Balance stream ---
+      _balSub = FirestoreService.streamBalance().listen((bal) {
+        setState(() {
+          _totalBalance  = bal['total'] ?? 0.0;
+          _monthlyBudget = bal['monthlyBudget'] ?? 0.0;
+        });
+      });
+
+      // --- Recent transactions stream (last 20) ---
+      _trxSub = FirestoreService.streamRecentTransactions().listen((trx) {
+        setState(() => _recentTransactions = trx);
+      });
+    }
   }
 
   @override
   void dispose() {
+    _catSub?.cancel();
+    _balSub?.cancel();
+    _trxSub?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
