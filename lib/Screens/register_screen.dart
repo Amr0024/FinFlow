@@ -73,6 +73,11 @@ class RegisterScreen extends StatelessWidget {
       // ---------- 1)  create auth user ----------
       final cred = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
+      await FirestoreService.initNewUser(
+        firstName: firstName,
+        lastName : lastName,
+        email    : email,
+      );
 
       final uid = cred.user!.uid;
 

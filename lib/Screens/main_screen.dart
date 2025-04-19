@@ -68,8 +68,24 @@ class _MainScreenState extends State<MainScreen> {
     if (uid != null) {
 
       // --- Categories stream ---
-      _catSub = FirestoreService.streamCategories().listen((cats) {
-        setState(() => _categories = cats);
+      _catSub = FirestoreService.categoryStream().listen((snap) {
+        setState(() {
+          _categories = [
+            ...snap.docs.map((d) => {
+              'id'   : d.id,
+              'name' : d['name'],
+              'icon' : IconData(d['icon'], fontFamily: 'MaterialIcons'),
+              'color': Color(d['color']),
+              'budget': (d['budget'] ?? 0).toDouble(),
+            }),
+            {                                // sentinel tile
+              'id'   : null,
+              'name' : 'Add Category',
+              'icon' : Icons.add,
+              'color': Colors.grey,
+            }
+          ];
+        });
       });
 
       // --- Balance stream ---
@@ -430,28 +446,47 @@ class _MainScreenState extends State<MainScreen> {
       MaterialPageRoute(
         builder: (context) => ExpansesScreen(
           categories: _categories,
-          onExpenseAdded: (String category, double amount, bool isNotPriority, String? productName, String? mandatoryLevel) {
-            setState(() {
-              // For your display, changed from -$ to -LE
-              _monthlyBudget -= amount;
+          onExpenseAdded: (String catName,
+              double amount,
+              bool isNotPriority,
+              String? productName,
+              String? mandatoryLevel) async {
 
-              if (category != 'None') {
-                int categoryIndex = _categories.indexWhere((cat) => cat['name'] == category);
-                if (categoryIndex != -1 && _categories[categoryIndex]['budget'] > 0) {
-                  _categories[categoryIndex]['budget'] -= amount;
-                }
+            // ---------- 1) local UI update (keep it – just wrap in setState) ----------
+            setState(() {
+              _monthlyBudget -= amount.abs();
+
+              // deduct from category budget if a real category
+              final catIndex = _categories.indexWhere((c) => c['name'] == catName);
+              if (catIndex != -1 && _categories[catIndex]['budget'] > 0) {
+                _categories[catIndex]['budget'] -= amount.abs();
               }
 
-              _recentTransactions.add({
-                'category': isNotPriority && category == 'None' ? productName! : category,
-                'amount': amount,
-                // changed from '-\$' to '-LE' in the final display below
-                'icon': isNotPriority ? Icons.remove : _categories.firstWhere((cat) => cat['name'] == category)['icon'],
-                'color': isNotPriority ? Colors.grey : _categories.firstWhere((cat) => cat['name'] == category)['color'],
+              _recentTransactions.insert(0, {
+                'category'    : isNotPriority && catName == 'None' ? productName! : catName,
+                'amount'      : amount.abs(),
+                'icon'        : isNotPriority
+                    ? Icons.remove
+                    : _categories.firstWhere((c) => c['name'] == catName)['icon'],
+                'color'       : isNotPriority
+                    ? Colors.grey
+                    : _categories.firstWhere((c) => c['name'] == catName)['color'],
                 'isNotPriority': isNotPriority,
-                'productName': productName,
+                'productName' : productName,
               });
             });
+
+            // ---------- 2) persist in Firestore ----------
+            final cat = _categories.firstWhere(
+                    (c) => c['name'] == catName,
+                orElse: () => {'id': null});      // id == null if 'None'
+
+            await FirestoreService.addTransaction(
+              catId      : cat['id'],             // may be null
+              amount     : -amount.abs(),         // negative = expense
+              notPriority: isNotPriority,
+              productName: productName,
+            );
           },
         ),
       ),
