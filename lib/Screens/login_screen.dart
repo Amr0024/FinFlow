@@ -5,8 +5,7 @@ import 'survey_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-// <-- For Google
+import 'package:google_sign_in/google_sign_in.dart'; // <-- For Google
 //import 'package:flutter_facebook_auth/flutter_facebook_auth.dart'; // <-- For Facebook
 
 import 'main_screen.dart';

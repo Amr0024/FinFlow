@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 class FirestoreService {
   static final _db = FirebaseFirestore.instance;
+
   static String get _uid => FirebaseAuth.instance.currentUser!.uid;
 
   // ──────────────────────────── raw streams (existing) ────────────────────────────
@@ -22,7 +23,8 @@ class FirestoreService {
           .collection('categories')
           .snapshots();
 
-  static Stream<QuerySnapshot<Map<String, dynamic>>> recentTxStream(int limit) =>
+  static Stream<QuerySnapshot<Map<String, dynamic>>> recentTxStream(
+      int limit) =>
       _db
           .collection('users')
           .doc(_uid)
@@ -32,7 +34,7 @@ class FirestoreService {
           .snapshots();
 
   // ──────────────────────────── PUBLIC WRAPPERS (NEW) ────────────────────────────
-  ///Categories as a List<Map<String,dynamic>>`
+  ///Categories as a List
   static Stream<List<Map<String, dynamic>>> streamCategories() =>
       categoryStream()
           .map((snap) => snap.docs.map(_catFromDoc).toList());
@@ -50,8 +52,9 @@ class FirestoreService {
   // Helper: rebuild Color / IconData from the primitive ints we store
   static Map<String, dynamic> _catFromDoc(
       DocumentSnapshot<Map<String, dynamic>> d) {
-    final m = d.data()!..addAll({'id': d.id});
-    m['icon']  = IconData(m['icon'], fontFamily: 'MaterialIcons');
+    final m = d.data()!
+      ..addAll({'id': d.id});
+    m['icon'] = IconData(m['icon'], fontFamily: 'MaterialIcons');
     m['color'] = Color(m['color']);
     return m;
   }
@@ -62,39 +65,60 @@ class FirestoreService {
     required String email,
   }) async {
     final userDoc = _db.collection('users').doc(_uid);
-
     // create sub‑collection docs inside a single batch
     final batch = _db.batch();
 
     // user profile (top‑level)
     batch.set(userDoc, {
       'firstName': firstName,
-      'lastName' : lastName,
-      'email'    : email,
+      'lastName': lastName,
+      'email': email,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
     // balance/current
     batch.set(userDoc.collection('balance').doc('current'), {
-      'total'        : 0.0,
-      'monthlyBudget': 0.0,
+      'total': 0.0,
+      'monthlyBudgetLeft': 0.0,
+      'monthlyBudgetTarget': 0.0,
+      'spent': 0.0
     });
 
     // some default categories
     const defaults = [
-      {'name':'Food',          'icon': 0xe57a, 'color': 0xFFe91e63},
-      {'name':'Entertainment', 'icon': 0xe8a3, 'color': 0xFF9c27b0},
-      {'name':'Fashion',       'icon': 0xe41d, 'color': 0xFF2196f3},
+      {'name': 'Food', 'icon': 0xe57a, 'color': 0xFFe91e63},
+      {'name': 'Entertainment', 'icon': 0xe8a3, 'color': 0xFF9c27b0},
+      {'name': 'Fashion', 'icon': 0xe41d, 'color': 0xFF2196f3},
     ];
     for (final cat in defaults) {
       final doc = userDoc.collection('categories').doc();
       batch.set(doc, {
-        'name'  : cat['name'],
-        'icon'  : cat['icon'],
-        'color' : cat['color'],
+        'name': cat['name'],
+        'icon': cat['icon'],
+        'color': cat['color'],
         'budget': 0.0,
       });
     }
+  }
+
+  static Future<void> setBalance({
+    required double total,
+    required double monthlyBudgetLeft,
+    required double monthlyBudgetTarget,
+    required spent,
+  }) {
+    final balRef = _db
+        .collection('users')
+        .doc(_uid)
+        .collection('balance')
+        .doc('current');
+
+    return balRef.set({
+      'total' : total,
+      'monthlyBudgetLeft': monthlyBudgetLeft,
+      'monthlyBudgetTarget': monthlyBudgetLeft,
+      'spent': spent,
+    }, SetOptions(merge: true));
   }
 
   static Future<void> addCategory({
@@ -108,47 +132,44 @@ class FirestoreService {
         .collection('categories')
         .add({
       'name': name,
-      'color': color,   // store primitive int (Color.value)
-      'icon': icon,     // store codePoint int (IconData.codePoint)
+      'color': color,
+      'icon': icon,
       'budget': 0.0,
     });
   }
 
-  ///`amount>0= incomeamount<0= expense
+  ///amount>0= income amount<0= expense
   static Future<void> addTransaction({
     required String? catId,
-    required double amount,
-    bool   notPriority = false,
+    required double amount, // + = income,  – = expense
+    bool notPriority = false,
     String? productName,
   }) async {
     final userDoc = _db.collection('users').doc(_uid);
-    final batch   = _db.batch();
+    final batch = _db.batch();
 
-    // 1)transaction row
+    // 1) transaction record
     final txRef = userDoc.collection('transactions').doc();
     batch.set(txRef, {
-      'catId'       : catId,
-      'amount'      : amount,
-      'createdAt'   : FieldValue.serverTimestamp(),
-      'notPriority' : notPriority,
-      'productName' : productName,
+      'catId': catId,
+      'amount': amount,
+      'createdAt': FieldValue.serverTimestamp(),
+      'notPriority': notPriority,
+      'productName': productName,
     });
 
-    // 2)running balance
-    batch.update(userDoc.collection('balance').doc('current'), {
-      'total'         : FieldValue.increment(amount),
-      'monthlyBudget' : FieldValue.increment(amount),
-    });
+    // 2) running balance
+    final balRef = userDoc.collection('balance').doc('current');
+    batch.set(balRef, { // set‑with‑merge ⇒ creates if absent
+      'monthlyBudgetLeft': FieldValue.increment(amount),
+    }, SetOptions(merge: true));
 
-    // 3-category budget (expenses only & catId not null)
+    // 3) category budget
     if (catId != null && amount < 0) {
-      batch.update(
-        userDoc.collection('categories').doc(catId),
-        {
-          // amount is negative, we subtract its absolute value
-          'budget': FieldValue.increment(amount.abs() * -1),
-        },
-      );
+      final catRef = userDoc.collection('categories').doc(catId);
+      batch.set(catRef, { // create if missing
+        'budget': FieldValue.increment(amount.abs()),
+      }, SetOptions(merge: true));
     }
 
     await batch.commit();

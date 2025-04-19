@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:projects_flutter/services/firestore_services.dart';
+import 'package:projects_flutter/services/firestore_services.dart'; // still here for saving
 
 class ExpansesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -22,11 +22,13 @@ class ExpansesScreen extends StatefulWidget {
 }
 
 class _ExpansesScreenState extends State<ExpansesScreen> {
-  // ───────────────────────────────── controllers / state
+  // ───────────────────────── controllers / state
   final _amountCtrl      = TextEditingController();
   final _productNameCtrl = TextEditingController();
 
-  List<Map<String, dynamic>> _cats = [];      // working copy
+  /// The list shown in the drop‑down (defaults + user‑defined)
+  late List<Map<String, dynamic>> _cats;
+
   String _selectedCatName = '';
   bool   _isNotPriority   = false;
   String _mandatoryLevel  = '';
@@ -34,24 +36,8 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
 
   final List<Map<String, dynamic>> _nonPriorityItems = [];
 
-  // ─────────────────────────────────────── init
-  @override
-  void initState() {
-    super.initState();
-
-    // start with categories from parent, otherwise provide defaults
-    _cats = [...widget.categories];
-    if (_cats.isEmpty) {
-      _cats.addAll(_defaultCats);
-    }
-    _selectedCatName = _cats.firstWhere(
-          (c) => c['name'] != 'Add Custom…',
-      orElse: () => _defaultCats.first,
-    )['name'];
-  }
-
-  // fallback defaults
-  static final _defaultCats = <Map<String, dynamic>>[
+  // ───────────────────────── fallback defaults (never saved to Firestore)
+  static const _defaultCats = <Map<String, dynamic>>[
     {
       'name': 'Entertainment',
       'icon': Icons.movie,
@@ -73,13 +59,45 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
       'color': Colors.blue,
     },
     {
-      'name': 'Add Custom…',                 // special sentinel
+      'name': 'Add Custom…',            // special sentinel
       'icon': Icons.add,
       'color': Colors.grey,
     },
   ];
 
-  // ─────────────────────────────── UI helpers
+  // ─────────────────────────── helper: current category Firestore id
+  String? _currentCatId() {
+    final cat = _cats.firstWhere(
+          (c) => c['name'] == _selectedCatName,
+      orElse: () => const {},          // no match → empty map
+    );
+
+    // guard: if there is no id or it isn’t a String, return null
+    final id = cat['id'];
+    return id is String ? id : null;
+  }
+
+  // initstate
+  @override
+  void initState() {
+    super.initState();
+
+    // Start with the built‑in defaults …
+    _cats = [..._defaultCats];
+
+    // merge categories coming from MainScreen / Firestore
+    for (final c in widget.categories) {
+      if (c['name'] == 'Add Custom…') continue;
+      final exists = _cats.any((d) => d['name'] == c['name']);
+      if (!exists) _cats.insert(_cats.length - 1, c);
+    }
+
+    // first real item as default selection
+    _selectedCatName =
+    _cats.firstWhere((c) => c['name'] != 'Add Custom…')['name'];
+  }
+
+  // UI helpers
   Widget _amountField() => _labelAnd(
     'Enter Amount',
     TextField(
@@ -100,9 +118,8 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
   Widget _categoryDropdown() => _labelAnd(
     'Select Category',
     DropdownButton<String>(
-      value: _selectedCatName.isEmpty ? null : _selectedCatName,
+      value: _selectedCatName,
       isExpanded: true,
-      hint: const Text('Choose category'),
       onChanged: _onCatChanged,
       items: _cats.map<DropdownMenuItem<String>>((c) {
         return DropdownMenuItem(
@@ -119,20 +136,19 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
     ),
   );
 
+  // category change / add custom
   void _onCatChanged(String? newValue) async {
     if (newValue == null) return;
 
     if (newValue == 'Add Custom…') {
       final created = await _showAddCatDialog();
       if (created != null) {
-        // Firestore insert
         await FirestoreService.addCategory(
           name : created['name'],
           icon : (created['icon'] as IconData).codePoint,
           color: (created['color'] as Color).value,
         );
 
-        // Local insert so the user sees it immediately
         setState(() {
           _cats.insert(_cats.length - 1, created);
           _selectedCatName = created['name'];
@@ -142,7 +158,6 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
       setState(() => _selectedCatName = newValue);
     }
   }
-
 
   Future<Map<String, dynamic>?> _showAddCatDialog() {
     final nameCtrl = TextEditingController();
@@ -161,7 +176,6 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
               decoration: _inputDeco('Category name'),
             ),
             const SizedBox(height: 10),
-            // simplistic colour picker
             Wrap(
               spacing: 6,
               children: [
@@ -218,8 +232,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
           children: [
             Checkbox(
               value: _mandatoryLevel == lvl,
-              onChanged: (v) =>
-                  setState(() => _mandatoryLevel = v! ? lvl : ''),
+              onChanged: (v) => setState(() => _mandatoryLevel = v! ? lvl : ''),
             ),
             Text(lvl),
           ],
@@ -235,12 +248,10 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       onPressed: _handleAddExpense,
-      child: const Text('Add Expense',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      child: const Text('Add Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
     ),
   );
 
@@ -253,17 +264,16 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
   Widget _labelAnd(String label, Widget field) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label,
-          style:
-          const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
       const SizedBox(height: 10),
       field,
       const SizedBox(height: 10),
     ],
   );
 
-  // ──────────────────────────── logic
-  void _handleAddExpense() {
+  // ───────────────────────────── logic
+  Future<void> _handleAddExpense() async {
+    // 1) basic validation ────────────────────────────────────────────
     if (_amountCtrl.text.isEmpty || _selectedCatName.isEmpty) {
       _showSnack('Please enter an amount and select a category.');
       return;
@@ -274,32 +284,55 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
     }
 
     final amount = double.tryParse(_amountCtrl.text) ?? 0;
-    widget.onExpenseAdded(
-      _selectedCatName,
-      amount,
-      _isNotPriority,
-      _isNotPriority ? _productNameCtrl.text : null,
-      _isNotPriority ? _mandatoryLevel : null,
-    );
 
-    if (_isNotPriority) {
-      _nonPriorityItems.add({
-        'name'          : _productNameCtrl.text,
-        'amount'        : amount,
-        'category'      : _selectedCatName,
-        'mandatoryLevel': _mandatoryLevel,
+    try {
+      // 2) write to Firestore (may throw) ────────────────────────────
+      await FirestoreService.addTransaction(
+        catId      : _currentCatId(),          // nullable for built‑ins
+        amount     : -amount.abs(),            // expenses are negative
+        notPriority: _isNotPriority,
+        productName: _isNotPriority ? _productNameCtrl.text : null,
+      );
+
+      // 3) update UI in memory (callback to MainScreen) ──────────────
+      widget.onExpenseAdded(
+        _selectedCatName,
+        amount,
+        _isNotPriority,
+        _isNotPriority ? _productNameCtrl.text : null,
+        _isNotPriority ? _mandatoryLevel       : null,
+      );
+
+      // 4) local list for non‑priority items (unchanged) ─────────────
+      if (_isNotPriority) {
+        _nonPriorityItems.add({
+          'name'          : _productNameCtrl.text,
+          'amount'        : amount,
+          'category'      : _selectedCatName,
+          'mandatoryLevel': _mandatoryLevel,
+        });
+      }
+
+      // 5) reset form fields ─────────────────────────────────────────
+      setState(() {
+        _amountCtrl.clear();
+        _productNameCtrl.clear();
+        _mandatoryLevel = '';
+        _isNotPriority  = false;
+        _showNPBtn      = _nonPriorityItems.isNotEmpty;
       });
+
+      // 6) tell user *before* leaving the page, then pop ─────────────
+      if (mounted) {
+        _showSnack('Expense added successfully!');
+        Navigator.pop(context);               // back to MainScreen
+      }
+    } catch (e) {
+      // Any Firestore / network error ends up here
+      if (mounted) {
+        _showSnack('Failed to add expense. Please try again.\n$e');
+      }
     }
-
-    setState(() {
-      _amountCtrl.clear();
-      _productNameCtrl.clear();
-      _mandatoryLevel = '';
-      _isNotPriority  = false;
-      _showNPBtn      = _nonPriorityItems.isNotEmpty;
-    });
-
-    _showSnack('Expense added successfully!');
   }
 
   void _showSnack(String msg) =>
@@ -339,8 +372,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       onPressed: () => showDialog(
         context: context,
@@ -363,9 +395,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
             ),
           ),
           actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close')),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
           ],
         ),
       ),

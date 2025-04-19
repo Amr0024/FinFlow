@@ -13,7 +13,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final List<String> tips = [
-    "Track your expenses effortlessly!",
     "Stay on top of your finances with FinFlow.",
     "Set budgets and achieve your financial goals.",
     "Visualize your spending with easy-to-read charts.",
@@ -114,28 +113,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-
-// Custom painter for hollow circles
-/*class HollowCirclePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.1) // Light white color for circles
-      ..style = PaintingStyle.stroke // Hollow circles
-      ..strokeWidth = 2; // Circle border width
-
-    // Draw multiple circles
-    for (int i = 0; i < 50; i++) {
-      final double radius = 20 + i * 10; // Vary the radius
-      final double x = size.width * (i % 10) / 10; // Spread horizontally
-      final double y = size.height * (i % 5) / 5; // Spread vertically
-
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // No need to repaint
-  }
-}*/
