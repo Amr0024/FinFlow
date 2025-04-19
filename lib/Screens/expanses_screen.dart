@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:projects_flutter/services/firestore_services.dart';
 
 class ExpansesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -124,6 +125,14 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
     if (newValue == 'Add Custom…') {
       final created = await _showAddCatDialog();
       if (created != null) {
+        // Firestore insert
+        await FirestoreService.addCategory(
+          name : created['name'],
+          icon : (created['icon'] as IconData).codePoint,
+          color: (created['color'] as Color).value,
+        );
+
+        // Local insert so the user sees it immediately
         setState(() {
           _cats.insert(_cats.length - 1, created);
           _selectedCatName = created['name'];
@@ -133,6 +142,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
       setState(() => _selectedCatName = newValue);
     }
   }
+
 
   Future<Map<String, dynamic>?> _showAddCatDialog() {
     final nameCtrl = TextEditingController();
