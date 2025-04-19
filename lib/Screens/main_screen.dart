@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For status bar style
 import 'dart:math'; // Import for Random
 import 'notes_screen.dart'; // Import the Notes Screen
-import 'expanses_screen.dart'; // Import the new Expanses Screen
-
+import 'expanses_screen.dart'; // Import the new Expenses Screen
+import 'package:FinFlow/lib/services/firestore_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -29,19 +29,92 @@ class _MainScreenState extends State<MainScreen> {
   String _firstName = '';
   String _lastName = '';
 
+  // 1. Balances row ----------------------------------
+  Widget _buildBalances() {
+    return StreamBuilder(
+      stream: FirestoreService.balanceStream(),
+      builder: (_, AsyncSnapshot snap) {
+        if (!snap.hasData) return const CircularProgressIndicator();
+        final data = snap.data!.data() ?? {};
+        final total = data['total'] ?? 0.0;
+        final left  = data['monthlyBudget'] ?? 0.0;
+        return Row(
+          children: [
+            Expanded(child: _buildOverviewCard('Total Balance', 'EGP ${total.toStringAsFixed(2)}', Colors.black)),
+            const SizedBox(width: 10),
+            Expanded(child: _buildOverviewCard('Monthly Budget Left', 'EGP ${left.toStringAsFixed(2)}', Colors.black)),
+          ],
+        );
+      },
+    );
+  }
+
+// 2. Category grid ---------------------------------
+  Widget _buildCategoryGrid() {
+    return StreamBuilder(
+      stream: FirestoreService.categoryStream(),
+      builder: (_, AsyncSnapshot snap) {
+        if (!snap.hasData) return const CircularProgressIndicator();
+        final docs = snap.data!.docs as List<QueryDocumentSnapshot<Map<String,dynamic>>>;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 20,
+          children: [
+            ...docs.map((doc) {
+              final d = doc.data();
+              return GestureDetector(
+                onTap: () => _showBudgetDialog(doc.id, d),
+                child: _buildCategoryBox(
+                  d['name'],
+                  IconData(d['icon'], fontFamily: 'MaterialIcons'),
+                  Color(d['color']),
+                  d['budget'] > 0 ? 'LE${(d['budget'] as num).toStringAsFixed(2)}' : '',
+                ),
+              );
+            }),
+            GestureDetector(
+              onTap: _showAddCategoryDialog,
+              child: _buildCategoryBox('Add', Icons.add, Colors.grey, ''),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+// 3. Recent transaction list ------------------------
+  Widget _buildRecentTx() {
+    return StreamBuilder(
+      stream: FirestoreService.recentTxStream(20),
+      builder: (_, AsyncSnapshot snap) {
+        if (!snap.hasData) return const CircularProgressIndicator();
+        final docs = snap.data!.docs as List<QueryDocumentSnapshot<Map<String,dynamic>>>;
+        return Column(
+          children: docs
+              .where((doc) => _selectedFilter == 'All' ||
+              (doc.data()['catIdName'] ?? '') == _selectedFilter)
+              .map((doc) {
+            final d = doc.data();
+            final amt  = d['amount'] as num;
+            final sign = amt > 0 ? '+' : '-';
+            return _buildTransactionItem(
+              d['catIdName'] ?? d['productName'] ?? 'Uncategorised',
+              '$signLE${amt.abs().toStringAsFixed(2)}',
+              amt > 0 ? Icons.arrow_downward : Icons.arrow_upward,
+              amt > 0 ? Colors.green         : Colors.red,
+              d['notPriority'] ?? false,
+              d['productName'],
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+
   // Categories
-  final List<Map<String, dynamic>> _categories = [
-    {'name': 'Groceries', 'icon': Icons.shopping_cart, 'color': Colors.green, 'budget': 0.0, 'expenses': []},
-    {'name': 'Entertainment', 'icon': Icons.movie, 'color': Colors.purple, 'budget': 0.0, 'expenses': []},
-    {'name': 'Bills', 'icon': Icons.receipt, 'color': Colors.blue, 'budget': 0.0, 'expenses': []},
-    {'name': 'Add Category', 'icon': Icons.add, 'color': Colors.grey, 'budget': 0.0, 'expenses': []},
-  ];
 
   // Recent transactions
-  final List<Map<String, dynamic>> _recentTransactions = [];
-
-  double _totalBalance = 0.0;
-  double _monthlyBudget = 0.0;
 
   String _selectedFilter = 'All';
 

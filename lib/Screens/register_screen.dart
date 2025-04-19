@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'survey_screen.dart';
 import 'package:flutter/cupertino.dart';
+import 'services/firestore_service.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -93,6 +94,15 @@ class RegisterScreen extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (context) => const SurveyScreen()),
       );
+
+      // initialise balance doc
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .collection('balance')
+          .doc('current')
+          .set({'total': 0.0, 'monthlyBudget': 0.0});
+
     } on FirebaseAuthException catch (e) {
       // Display any errors (e.g., email already in use, invalid format, etc.)
       ScaffoldMessenger.of(context).showSnackBar(
