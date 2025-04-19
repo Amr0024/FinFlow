@@ -1,14 +1,21 @@
-// main_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For status bar style
 import 'dart:math'; // Import for Random
 import 'notes_screen.dart'; // Import the Notes Screen
 import 'expanses_screen.dart'; // Import the new Expanses Screen
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
   final Map<String, dynamic> surveyResults; // Survey results
 
-  MainScreen({required this.selectedGoals, required this.surveyResults}); // Constructor
+  const MainScreen({
+    super.key,
+    required this.selectedGoals,
+    required this.surveyResults,
+  });
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -16,11 +23,13 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final ScrollController _scrollController = ScrollController();
-  double _bannerOpacity = 1.0; // Initial opacity of the banner
-  double _bannerOffset = 0.0; // Initial offset of the banner
-  final Random _random = Random();
+  double _bannerOpacity = 1.0;
+  double _bannerOffset = 0.0;
 
-  // Store category data (name, icon, color, budget)
+  String _firstName = '';
+  String _lastName = '';
+
+  // Categories
   final List<Map<String, dynamic>> _categories = [
     {'name': 'Groceries', 'icon': Icons.shopping_cart, 'color': Colors.green, 'budget': 0.0, 'expenses': []},
     {'name': 'Entertainment', 'icon': Icons.movie, 'color': Colors.purple, 'budget': 0.0, 'expenses': []},
@@ -28,34 +37,36 @@ class _MainScreenState extends State<MainScreen> {
     {'name': 'Add Category', 'icon': Icons.add, 'color': Colors.grey, 'budget': 0.0, 'expenses': []},
   ];
 
-  // List of icons for the "Add Category" dialog
-  final List<IconData> _availableIcons = [
-    Icons.shopping_cart,
-    Icons.movie,
-    Icons.receipt,
-    Icons.local_gas_station,
-    Icons.fastfood,
-    Icons.medical_services,
-    Icons.school,
-    Icons.flight,
-    Icons.fitness_center,
-    Icons.music_note,
-  ];
-
-  // Add this list to store recent transactions
+  // Recent transactions
   final List<Map<String, dynamic>> _recentTransactions = [];
 
-  // Add variables for Total Balance and Monthly Budget
-  double _totalBalance = 0.0; // Initial total balance
-  double _monthlyBudget = 0.0; // Initial monthly budget
+  double _totalBalance = 0.0;
+  double _monthlyBudget = 0.0;
 
-  // Variable to track the selected filter for recent transactions
   String _selectedFilter = 'All';
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get()
+          .then((docSnapshot) {
+        if (docSnapshot.exists) {
+          setState(() {
+            _firstName = docSnapshot.get('firstName') ?? '';
+            _lastName = docSnapshot.get('lastName') ?? '';
+          });
+        }
+      }).catchError((error) {
+        // handle errors
+      });
+    }
   }
 
   @override
@@ -67,28 +78,26 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onScroll() {
     setState(() {
-      // Adjust banner opacity and offset based on scroll position
       if (_scrollController.offset > 100) {
-        _bannerOpacity = 0.0; // Fully fade out
-        _bannerOffset = 100; // Stop moving after 100px
+        _bannerOpacity = 0.0;
+        _bannerOffset = 100;
       } else {
-        _bannerOpacity = 1.0 - (_scrollController.offset / 100); // Fade gradually
-        _bannerOffset = _scrollController.offset; // Move banner with scroll
+        _bannerOpacity = 1.0 - (_scrollController.offset / 100);
+        _bannerOffset = _scrollController.offset;
       }
     });
   }
 
-  // Show a popup to set the Total Balance
   void _showSetTotalBalanceDialog() {
-    TextEditingController _totalBalanceController = TextEditingController();
+    TextEditingController totalBalanceController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Enter Total Balance'),
+          title: const Text('Enter Total Balance'),
           content: TextField(
-            controller: _totalBalanceController,
+            controller: totalBalanceController,
             decoration: InputDecoration(
               hintText: 'Enter Total Balance',
               border: OutlineInputBorder(
@@ -99,22 +108,20 @@ class _MainScreenState extends State<MainScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Cancel'),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () {
-                if (_totalBalanceController.text.isNotEmpty) {
+                if (totalBalanceController.text.isNotEmpty) {
                   setState(() {
-                    _totalBalance = double.parse(_totalBalanceController.text);
-                    _monthlyBudget = _totalBalance; // Set Monthly Budget equal to Total Balance
+                    _totalBalance = double.parse(totalBalanceController.text);
+                    _monthlyBudget = _totalBalance;
                   });
                   Navigator.pop(context);
                 }
               },
-              child: Text('Set'),
+              child: const Text('Set'),
             ),
           ],
         );
@@ -122,7 +129,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // Show a dialog to display the monthly plan
   void _showMonthlyPlanDialog() {
     Map<String, dynamic> monthlyPlan = _generateMonthlyPlan();
 
@@ -130,32 +136,32 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(
+          title: const Text(
             'Your Monthly Plan',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.9, // Larger popup width
-              height: MediaQuery.of(context).size.height * 0.7, // Larger popup height
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.7,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Suggested Monthly Budget: \$${monthlyPlan['suggestedBudget'].toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    'Suggested Monthly Budget: LE${monthlyPlan['suggestedBudget'].toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 20),
-                  Text(
+                  const SizedBox(height: 20),
+                  const Text(
                     'Recommendations:',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   ...monthlyPlan['recommendations'].map((recommendation) {
                     return ListTile(
-                      leading: Icon(Icons.lightbulb_outline, color: Colors.teal, size: 24),
+                      leading: const Icon(Icons.lightbulb_outline, color: Colors.teal, size: 24),
                       title: Text(
                         recommendation,
-                        style: TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: 16),
                       ),
                     );
                   }).toList(),
@@ -165,13 +171,8 @@ class _MainScreenState extends State<MainScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Close',
-                style: TextStyle(fontSize: 18),
-              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close', style: TextStyle(fontSize: 18)),
             ),
           ],
         );
@@ -179,27 +180,27 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // Generate a monthly plan based on survey results
+  // Replaces references to strings like "$500-$1000" with "LE500-LE1000"
   Map<String, dynamic> _generateMonthlyPlan() {
-    // Extract survey data
+    // Notice the replacements from "\$20-\$50" to "LE20-LE50", etc.
     String trackingPreference = widget.surveyResults['How often do you want to track your expenses?'] ?? 'Monthly';
-    String dailySpending = widget.surveyResults['On average, how much do you spend daily?'] ?? '\$20-\$50';
-    String monthlySpending = widget.surveyResults['On average, how much do you spend monthly?'] ?? '\$500-\$1000';
+    String dailySpending = widget.surveyResults['On average, how much do you spend daily?'] ?? 'LE20-LE50';
+    String monthlySpending = widget.surveyResults['On average, how much do you spend monthly?'] ?? 'LE500-LE1000';
     List<String> financialGoals = widget.surveyResults['Financial Goals'] ?? [];
 
-    // Calculate suggested monthly budget
     double suggestedBudget = 0.0;
-    if (monthlySpending == 'Less than \$500') {
+
+    // changed from 'Less than $500' => 'Less than LE500'
+    if (monthlySpending == 'Less than LE500') {
       suggestedBudget = 400.0;
-    } else if (monthlySpending == '\$500-\$1000') {
+    } else if (monthlySpending == 'LE500-LE1000') {
       suggestedBudget = 750.0;
-    } else if (monthlySpending == '\$1000-\$2000') {
+    } else if (monthlySpending == 'LE1000-LE2000') {
       suggestedBudget = 1500.0;
-    } else if (monthlySpending == 'More than \$2000') {
+    } else if (monthlySpending == 'More than LE2000') {
       suggestedBudget = 2500.0;
     }
 
-    // Add recommendations based on financial goals
     List<String> recommendations = [];
     if (financialGoals.contains('Save for a big purchase')) {
       recommendations.add('Consider saving 20% of your income for a big purchase.');
@@ -218,9 +219,8 @@ class _MainScreenState extends State<MainScreen> {
     };
   }
 
-  // Show a popup dialog to set or edit the budget for a category
   void _showBudgetDialog(int index) {
-    TextEditingController _budgetController = TextEditingController(
+    TextEditingController budgetController = TextEditingController(
       text: _categories[index]['budget'] == 0.0 ? '' : _categories[index]['budget'].toString(),
     );
 
@@ -228,13 +228,13 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Colors.white, // Non-transparent background
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          content: Container(
-            width: MediaQuery.of(context).size.width * 0.8, // Larger popup width
-            height: 200, // Taller popup height
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: 200,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -242,10 +242,10 @@ class _MainScreenState extends State<MainScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Icon(_categories[index]['icon'], color: _categories[index]['color'], size: 30),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
-                        controller: _budgetController,
+                        controller: budgetController,
                         decoration: InputDecoration(
                           hintText: 'Enter Amount',
                           border: OutlineInputBorder(
@@ -257,23 +257,23 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () {
-                    if (_budgetController.text.isNotEmpty) {
+                    if (budgetController.text.isNotEmpty) {
                       setState(() {
-                        _categories[index]['budget'] = double.parse(_budgetController.text);
+                        _categories[index]['budget'] = double.parse(budgetController.text);
                       });
                       Navigator.pop(context);
                     }
                   },
-                  child: Text('Set Budget'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _categories[index]['color'],
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
+                  child: const Text('Set Budget'),
                 ),
               ],
             ),
@@ -283,11 +283,10 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // Show a dialog to add a new category
   void _showAddCategoryDialog() {
-    TextEditingController _nameController = TextEditingController();
-    IconData _selectedIcon = Icons.add;
-    Color _selectedColor = Colors.grey;
+    TextEditingController nameController = TextEditingController();
+    IconData selectedIcon = Icons.add;
+    Color selectedColor = Colors.grey;
 
     showDialog(
       context: context,
@@ -295,12 +294,12 @@ class _MainScreenState extends State<MainScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Add New Category'),
+              title: const Text('Add New Category'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                    controller: _nameController,
+                    controller: nameController,
                     decoration: InputDecoration(
                       hintText: 'Category Name',
                       border: OutlineInputBorder(
@@ -308,26 +307,37 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  Text('Choose an Icon:', style: TextStyle(fontSize: 16)),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 20),
+                  const Text('Choose an Icon:', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 10,
-                    children: _availableIcons.map((icon) {
+                    children: [
+                      Icons.shopping_cart,
+                      Icons.movie,
+                      Icons.receipt,
+                      Icons.local_gas_station,
+                      Icons.fastfood,
+                      Icons.medical_services,
+                      Icons.school,
+                      Icons.flight,
+                      Icons.fitness_center,
+                      Icons.music_note,
+                    ].map((icon) {
                       return IconButton(
                         icon: Icon(icon),
-                        color: _selectedIcon == icon ? Colors.blue : Colors.grey,
+                        color: selectedIcon == icon ? Colors.blue : Colors.grey,
                         onPressed: () {
                           setState(() {
-                            _selectedIcon = icon;
+                            selectedIcon = icon;
                           });
                         },
                       );
                     }).toList(),
                   ),
-                  SizedBox(height: 20),
-                  Text('Choose a Color:', style: TextStyle(fontSize: 16)),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 20),
+                  const Text('Choose a Color:', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 10,
                     children: [
@@ -340,7 +350,7 @@ class _MainScreenState extends State<MainScreen> {
                       return GestureDetector(
                         onTap: () {
                           setState(() {
-                            _selectedColor = color;
+                            selectedColor = color;
                           });
                         },
                         child: Container(
@@ -350,7 +360,7 @@ class _MainScreenState extends State<MainScreen> {
                             color: color,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: _selectedColor == color ? Colors.black : Colors.transparent,
+                              color: selectedColor == color ? Colors.black : Colors.transparent,
                               width: 2,
                             ),
                           ),
@@ -362,21 +372,19 @@ class _MainScreenState extends State<MainScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('Cancel'),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (_nameController.text.isNotEmpty) {
+                    if (nameController.text.isNotEmpty) {
                       setState(() {
                         _categories.insert(
                           _categories.length - 1,
                           {
-                            'name': _nameController.text,
-                            'icon': _selectedIcon,
-                            'color': _selectedColor,
+                            'name': nameController.text,
+                            'icon': selectedIcon,
+                            'color': selectedColor,
                             'budget': 0.0,
                             'expenses': [],
                           },
@@ -385,7 +393,7 @@ class _MainScreenState extends State<MainScreen> {
                       Navigator.pop(context);
                     }
                   },
-                  child: Text('Add'),
+                  child: const Text('Add'),
                 ),
               ],
             );
@@ -395,7 +403,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // Navigate to the new expanses screen
   void _navigateToExpansesScreen() {
     Navigator.push(
       context,
@@ -404,10 +411,9 @@ class _MainScreenState extends State<MainScreen> {
           categories: _categories,
           onExpenseAdded: (String category, double amount, bool isNotPriority, String? productName, String? mandatoryLevel) {
             setState(() {
-              // Subtract from Monthly Budget
+              // For your display, changed from -$ to -LE
               _monthlyBudget -= amount;
 
-              // Subtract from Category Budget (if applicable)
               if (category != 'None') {
                 int categoryIndex = _categories.indexWhere((cat) => cat['name'] == category);
                 if (categoryIndex != -1 && _categories[categoryIndex]['budget'] > 0) {
@@ -415,13 +421,11 @@ class _MainScreenState extends State<MainScreen> {
                 }
               }
 
-              // Add to Recent Transactions
               _recentTransactions.add({
                 'category': isNotPriority && category == 'None' ? productName! : category,
                 'amount': amount,
-                'icon': isNotPriority
-                    ? Icons.remove // Unique icon for non-priority
-                    : _categories.firstWhere((cat) => cat['name'] == category)['icon'],
+                // changed from '-\$' to '-LE' in the final display below
+                'icon': isNotPriority ? Icons.remove : _categories.firstWhere((cat) => cat['name'] == category)['icon'],
                 'color': isNotPriority ? Colors.grey : _categories.firstWhere((cat) => cat['name'] == category)['color'],
                 'isNotPriority': isNotPriority,
                 'productName': productName,
@@ -435,277 +439,276 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Financial Goals Banner with Hollow Circles Texture
-          Transform.translate(
-            offset: Offset(0, -_bannerOffset), // Move banner up as user scrolls
-            child: Opacity(
-              opacity: _bannerOpacity,
-              child: Container(
-                height: 250, // Fixed height for the banner
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.indigo[900]!, Colors.purple[800]!], // Dark blue to purple
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    stops: [0.2, 0.8], // Smooth transition
-                    tileMode: TileMode.clamp, // Prevents weird lines
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Hollow Circles Texture
-                    CustomPaint(
-                      size: Size(double.infinity, 230), // Match banner height
-                      painter: HollowCirclePainter(),
+    // Force the status bar to white with dark icons
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ));
+
+    return SafeArea(
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Transform.translate(
+              offset: Offset(0, -_bannerOffset),
+              child: Opacity(
+                opacity: _bannerOpacity,
+                child: Container(
+                  height: 250,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.indigo[900]!, Colors.purple[800]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      stops: const [0.2, 0.8],
+                      tileMode: TileMode.clamp,
                     ),
-                    // Banner Content
-                    Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(top: 10), // Move FinFlow name down
-                                child: Text(
-                                  'FinFlow',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                  ),
+                  child: Stack(
+                    children: [
+                      CustomPaint(
+                        size: const Size(double.infinity, 230)
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Single row with "Hi, X" and top-right icons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  (_firstName.isNotEmpty || _lastName.isNotEmpty)
+                                      ? 'Hi, $_firstName $_lastName!'
+                                      : 'Hi!',
+                                  style: const TextStyle(
+                                    fontSize: 20,
                                     color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.only(top: 10), // Move icons down
-                                child: Row(
+                                Row(
                                   children: [
                                     IconButton(
-                                      icon: Icon(Icons.notifications, color: Colors.white),
+                                      icon: const Icon(Icons.notifications, color: Colors.white),
                                       onPressed: () {
                                         // Handle notifications
                                       },
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.settings, color: Colors.white),
+                                      icon: const Icon(Icons.settings, color: Colors.white),
                                       onPressed: () {
                                         // Navigate to settings
                                       },
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 20),
-                          Text(
-                            'Financial Goals',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              ],
                             ),
-                          ),
-                          SizedBox(height: 10),
-                          // Display selected goals
-                          if (widget.selectedGoals.isNotEmpty)
-                            ...widget.selectedGoals.map((goal) {
-                              return _buildGoalProgress(goal, 50); // Default progress of 50%
-                            }).toList(),
-                        ],
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Financial Goals',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            if (widget.selectedGoals.isNotEmpty)
+                              ...widget.selectedGoals.map((goal) {
+                                return _buildGoalProgress(goal, 50);
+                              }),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // Scrollable Content
-          SingleChildScrollView(
-            controller: _scrollController,
-            padding: EdgeInsets.only(top: 270), // Match banner height (240)
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Overview Section
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: _showSetTotalBalanceDialog, // Open popup to set Total Balance
-                        child: _buildOverviewCard('Total Balance', '\$${_totalBalance.toStringAsFixed(2)}', Colors.blue),
+            SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.only(top: 270),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _showSetTotalBalanceDialog,
+                          child: _buildOverviewCard('Total Balance', 'EGP ${_totalBalance.toStringAsFixed(2)}', Colors.black),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildOverviewCard('Monthly Budget Left', 'EGP ${_monthlyBudget.toStringAsFixed(2)}', Colors.black),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // If you have something like "Last Month Savings Progress: 40%" that's text, we keep it
+                  _buildOverviewCard('Last Month Savings Progress', '40%', Colors.black),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Quick Actions',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildQuickActionButton(Icons.add, 'Add Expense', Colors.blue, _navigateToExpansesScreen),
+                      _buildQuickActionButton(Icons.attach_money, 'Add Income', Colors.green, () {}),
+                      _buildQuickActionButton(Icons.calendar_today, 'Monthly Plan', Colors.teal, _showMonthlyPlanDialog),
+                      _buildQuickActionButton(Icons.bar_chart, 'Reports', Colors.orange, () {
+                        Navigator.pushNamed(context, '/reports');
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Monthly Expenses Graph',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    height: 300,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      // If there's a $ in the asset path, remove it; otherwise just keep it
+                      child: Image.asset(
+                        'assets/images/graph_placeholder.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: _buildOverviewCard('Monthly Budget Left', '\$${_monthlyBudget.toStringAsFixed(2)}', Colors.green),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-                _buildOverviewCard('Last Month Savings Progress', '40%', Colors.orange),
-                SizedBox(height: 20),
-
-                // Quick Actions
-                Text(
-                  'Quick Actions',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildQuickActionButton(Icons.add, 'Add Expense', Colors.blue, _navigateToExpansesScreen),
-                    _buildQuickActionButton(Icons.attach_money, 'Add Income', Colors.green, () {}),
-                    _buildQuickActionButton(Icons.calendar_today, 'Monthly Plan', Colors.teal, _showMonthlyPlanDialog),
-                    _buildQuickActionButton(Icons.bar_chart, 'Reports', Colors.orange, () {
-                      Navigator.pushNamed(context, '/reports'); // Navigate to Reports Screen
-                    }),
-                  ],
-                ),
-                SizedBox(height: 20),
-
-                // Monthly Expenses Graph
-                Text(
-                  'Monthly Expenses Graph',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                Container(
-                  height: 300,
-                  decoration: BoxDecoration(
-                    color: Colors.white, // Light gray background for the graph
-                    borderRadius: BorderRadius.circular(10), // Rounded corners
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/images/graph_placeholder.png', // Replace with your graph image
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // Expense Categories
-                Text(
-                  'Expense Categories',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-                Wrap(
-                  spacing: 10.0, // Horizontal space between items
-                  runSpacing: 20.0, // Vertical space between items
-                  children: _categories.map((category) {
-                    return GestureDetector(
-                      onTap: () {
-                        if (category['name'] == 'Add Category') {
-                          _showAddCategoryDialog();
-                        } else {
-                          _showBudgetDialog(_categories.indexOf(category));
-                        }
-                      },
-                      child: _buildCategoryBox(
-                        category['name'],
-                        category['icon'],
-                        category['color'],
-                        category['budget'] > 0 ? '\$${category['budget'].toStringAsFixed(2)}' : '',
+                  const Text(
+                    'Expense Categories',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10.0,
+                    runSpacing: 20.0,
+                    children: _categories.map((category) {
+                      return GestureDetector(
+                        onTap: () {
+                          if (category['name'] == 'Add Category') {
+                            _showAddCategoryDialog();
+                          } else {
+                            _showBudgetDialog(_categories.indexOf(category));
+                          }
+                        },
+                        child: _buildCategoryBox(
+                          category['name'],
+                          category['icon'],
+                          category['color'],
+                          category['budget'] > 0 ? 'LE${category['budget'].toStringAsFixed(2)}' : '',
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 40),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Transactions',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                    );
-                  }).toList(),
-                ),
-                SizedBox(height: 40),
-
-                // Recent Transactions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Recent Transactions',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    DropdownButton<String>(
-                      value: _selectedFilter,
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedFilter = value!;
-                        });
-                      },
-                      items: ['All', 'Groceries', 'Entertainment', 'Bills'].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-                Column(
-                  children: _recentTransactions
-                      .where((transaction) =>
-                  _selectedFilter == 'All' || transaction['category'] == _selectedFilter)
-                      .map((transaction) {
-                    return _buildTransactionItem(
-                      transaction['category'],
-                      '-\$${transaction['amount'].toStringAsFixed(2)}',
-                      transaction['icon'],
-                      transaction['color'],
-                      transaction['isNotPriority'],
-                      transaction['productName'],
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notes),
-            label: 'Notes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-        currentIndex: 0, // Home is selected by default
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey, // Gray for deselected items
-        onTap: (index) {
-          if (index == 1) {
-            Navigator.push(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => NotesScreen(categories: _categories),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  const begin = Offset(1.0, 0.0); // Start from the right
-                  const end = Offset.zero;
-                  const curve = Curves.easeInOut;
-                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                  var offsetAnimation = animation.drive(tween);
-                  return SlideTransition(position: offsetAnimation, child: child);
-                },
+                      DropdownButton<String>(
+                        value: _selectedFilter,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedFilter = value!;
+                          });
+                        },
+                        items: ['All', 'Groceries', 'Entertainment', 'Bills'].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Column(
+                    children: _recentTransactions
+                        .where((transaction) => _selectedFilter == 'All' || transaction['category'] == _selectedFilter)
+                        .map((transaction) {
+                      // Display amount as '-LE...' now
+                      final displayAmount = '-LE${transaction['amount'].toStringAsFixed(2)}';
+                      return _buildTransactionItem(
+                        transaction['category'],
+                        displayAmount,
+                        transaction['icon'],
+                        transaction['color'],
+                        transaction['isNotPriority'],
+                        transaction['productName'],
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
-            );
-          }
-        },
+            ),
+          ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.notes),
+              label: 'Notes',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Reports',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+          currentIndex: 0,
+          selectedItemColor: Colors.blue,
+          unselectedItemColor: Colors.grey,
+          onTap: (index) {
+            if (index == 1) {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      NotesScreen(categories: _categories),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    const begin = Offset(1.0, 0.0);
+                    const end = Offset.zero;
+                    const curve = Curves.easeInOut;
+                    final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                    final offsetAnimation = animation.drive(tween);
+                    return SlideTransition(position: offsetAnimation, child: child);
+                  },
+                ),
+              );
+            }
+          },
+        ),
       ),
     );
   }
@@ -714,15 +717,12 @@ class _MainScreenState extends State<MainScreen> {
     return Card(
       elevation: 4,
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+            const SizedBox(height: 10),
             Text(
               value,
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
@@ -739,37 +739,37 @@ class _MainScreenState extends State<MainScreen> {
       child: Column(
         children: [
           CircleAvatar(
-            radius: 40, // Increased size (2x larger)
+            radius: 40,
             backgroundColor: color,
-            child: Icon(icon, color: Colors.white, size: 40), // Increased icon size
+            child: Icon(icon, color: Colors.white, size: 40),
           ),
-          SizedBox(height: 5),
-          Text(label, style: TextStyle(fontSize: 16)), // Increased font size
+          const SizedBox(height: 5),
+          Text(label, style: const TextStyle(fontSize: 16)),
         ],
       ),
     );
   }
 
-  Widget _buildTransactionItem(String category, String amount, IconData icon, Color color, bool isNotPriority, String? productName) {
+  Widget _buildTransactionItem(
+      String category,
+      String amount,
+      IconData icon,
+      Color color,
+      bool isNotPriority,
+      String? productName,
+      ) {
     return ListTile(
       leading: Icon(
         icon,
-        color: isNotPriority ? Colors.grey : color, // Gray icon for non-priority
+        color: isNotPriority ? Colors.grey : color,
       ),
       title: Text(
-        isNotPriority && category == 'None' ? productName! : category, // Display product name if non-priority and category is "None"
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
+        isNotPriority && category == 'None' ? productName! : category,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
       trailing: Text(
-        amount,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.red, // Red color for expense amounts
-        ),
+        amount, // e.g. '-LE50.00'
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
       ),
     );
   }
@@ -780,68 +780,54 @@ class _MainScreenState extends State<MainScreen> {
       children: [
         Text(
           goal,
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.white,
-          ),
+          style: const TextStyle(fontSize: 16, color: Colors.white),
         ),
-        SizedBox(height: 5),
+        const SizedBox(height: 5),
         ClipRRect(
-          borderRadius: BorderRadius.circular(10), // Rounded corners
+          borderRadius: BorderRadius.circular(10),
           child: LinearProgressIndicator(
             value: progress / 100,
             backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.purple), // Purple progress bar
-            minHeight: 10, // Thicker progress bar
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.purple),
+            minHeight: 10,
           ),
         ),
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
       ],
     );
   }
 
+  // Changed from \$ to LE in "remainingBudget"
   Widget _buildCategoryBox(String category, IconData icon, Color color, String remainingBudget) {
     return Container(
-      width: 140, // Increased width for the circle
-      height: 140, // Increased height for the circle
+      width: 140,
+      height: 140,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2), // Light background color
-        shape: BoxShape.circle, // Circular shape
+        color: color.withOpacity(0.2),
+        shape: BoxShape.circle,
       ),
       child: ClipOval(
         child: Stack(
           children: [
             Center(
               child: category == 'Add Category'
-                  ? Icon(
-                icon,
-                size: 50, // Increased icon size
-                color: color, // Icon color
-              )
+                  ? Icon(icon, size: 50, color: color)
                   : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    icon,
-                    size: 40, // Increased icon size
-                    color: color, // Icon color
-                  ),
-                  SizedBox(height: 5),
+                  Icon(icon, size: 40, color: color),
+                  const SizedBox(height: 5),
                   Text(
                     category,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color),
                   ),
-                  SizedBox(height: 0),
-                  if (remainingBudget.isNotEmpty) // Show remaining budget if available
+                  const SizedBox(height: 0),
+                  if (remainingBudget.isNotEmpty)
                     Text(
-                      remainingBudget,
-                      style: TextStyle(
-                        fontSize: 18, // Adjust font size for budget left
-                        color: Colors.green, // Green color for remaining budget
+                      remainingBudget, // e.g. 'LE300.00'
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.green,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -855,29 +841,23 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// Custom painter for hollow circles (used in the banner)
-class HollowCirclePainter extends CustomPainter {
+/*class HollowCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.1) // Light white color for circles
-      ..style = PaintingStyle.stroke // Hollow circles
-      ..strokeWidth = 2; // Circle border width
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
 
     final Random random = Random();
-
-    // Draw multiple circles
     for (int i = 0; i < 50; i++) {
-      final double radius = 20 + i * 10; // Vary the radius
-      final double x = size.width * (i % 10) / 10; // Spread horizontally
-      final double y = size.height * (i % 5) / 5; // Spread vertically
-
+      final double radius = 20 + i * 10;
+      final double x = size.width * (i % 10) / 10;
+      final double y = size.height * (i % 5) / 5;
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // No need to repaint
-  }
-}
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}*/

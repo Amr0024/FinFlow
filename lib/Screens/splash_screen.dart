@@ -1,9 +1,12 @@
 // splash_screen.dart
 import 'package:flutter/material.dart';
+import 'package:projects_flutter/Screens/register_screen.dart';
 import 'dart:async'; // Import for Timer
 import 'login_screen.dart'; // Import the login screen
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -24,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     // Start a timer to cycle through tips every 2 seconds
-    _tipTimer = Timer.periodic(Duration(seconds: 3), (timer) {
+    _tipTimer = Timer.periodic(Duration(seconds: 2), (timer) {
       if (mounted) {
         setState(() {
           currentTipIndex = (currentTipIndex + 1) % tips.length;
@@ -67,8 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             child: CustomPaint(
-              size: Size.infinite,
-              painter: HollowCirclePainter(),
+              size: Size.infinite
             ),
           ),
           // Content
@@ -81,6 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 Text(
                   'FinFlow', // App name
                   style: TextStyle(
+                    fontFamily: 'Helvetica',
                     fontSize: 32,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -96,9 +99,9 @@ class _SplashScreenState extends State<SplashScreen> {
                       key: ValueKey<int>(currentTipIndex), // Unique key for animation
                       textAlign: TextAlign.center,
                       style: TextStyle(
+                        fontFamily: 'Helvetica',
                         fontSize: 18,
                         color: Colors.white,
-                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ),
@@ -113,7 +116,7 @@ class _SplashScreenState extends State<SplashScreen> {
 }
 
 // Custom painter for hollow circles
-class HollowCirclePainter extends CustomPainter {
+/*class HollowCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
@@ -135,4 +138,4 @@ class HollowCirclePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return false; // No need to repaint
   }
-}
+}*/

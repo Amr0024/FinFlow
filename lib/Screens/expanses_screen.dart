@@ -5,7 +5,7 @@ class ExpansesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
   final Function(String category, double amount, bool isNotPriority, String? productName, String? mandatoryLevel) onExpenseAdded;
 
-  ExpansesScreen({required this.categories, required this.onExpenseAdded});
+  const ExpansesScreen({super.key, required this.categories, required this.onExpenseAdded});
 
   @override
   _ExpansesScreenState createState() => _ExpansesScreenState();
@@ -16,7 +16,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
   final TextEditingController _productNameController = TextEditingController();
   String _selectedCategory = '';
   bool _isNotPriority = false;
-  List<Map<String, dynamic>> _nonPriorityItems = [];
+  final List<Map<String, dynamic>> _nonPriorityItems = [];
   String _mandatoryLevel = ''; // Low, Medium, High
   bool _showNonPriorityButton = false; // Controls visibility of "View Non-Priority Items" button
 
@@ -52,8 +52,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
             ),
           ),
           child: CustomPaint(
-            size: Size(double.infinity, 150), // Bigger banner
-            painter: HollowCirclePainter(),
+            size: Size(double.infinity, 150) // Bigger banner
           ),
         ),
       ),
@@ -223,7 +222,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                   DropdownMenuItem(
                     value: 'None',
                     child: Text('None'),
@@ -239,7 +238,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
               height: 50,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.indigo[900]!, Colors.purple[800]!],
+                  colors: [Colors.black, Colors.black],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
@@ -308,16 +307,16 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
                     ),
                   );
                 },
-                child: Text(
-                  'Add Expense',
-                  style: TextStyle(color: Colors.white), // White text
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
+                ),
+                child: Text(
+                  'Add Expense',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20, fontFamily: 'Helvetica') // Text
                 ),
               ),
             ),
@@ -370,16 +369,16 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
                       },
                     );
                   },
-                  child: Text(
-                    'View Non-Priority Items',
-                    style: TextStyle(color: Colors.white), // White text
-                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
+                  ),
+                  child: Text(
+                    'View Non-Priority Items',
+                    style: TextStyle(color: Colors.white), // White text
                   ),
                 ),
               ),
@@ -420,7 +419,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
 }
 
 // Custom painter for hollow circles (used in the banner)
-class HollowCirclePainter extends CustomPainter {
+/*class HollowCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
@@ -443,5 +442,4 @@ class HollowCirclePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return false; // No need to repaint
-  }
-}
+  }*/

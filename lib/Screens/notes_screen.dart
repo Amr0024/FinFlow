@@ -7,7 +7,7 @@ import 'dart:convert';
 class NotesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
 
-  NotesScreen({required this.categories});
+  const NotesScreen({super.key, required this.categories});
 
   @override
   _NotesScreenState createState() => _NotesScreenState();
@@ -50,11 +50,11 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   void _showAddNoteDialog() {
-    final _formKey = GlobalKey<FormState>();
-    final _noteController = TextEditingController();
-    final _amountController = TextEditingController();
-    DateTime _selectedDate = DateTime.now();
-    String _selectedCategory = widget.categories.isNotEmpty
+    final formKey = GlobalKey<FormState>();
+    final noteController = TextEditingController();
+    final amountController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    String selectedCategory = widget.categories.isNotEmpty
         ? widget.categories[0]['name']
         : 'Unknown';
 
@@ -70,7 +70,7 @@ class _NotesScreenState extends State<NotesScreen> {
             padding: const EdgeInsets.all(30.0),
             child: SingleChildScrollView(
               child: Form(
-                key: _formKey,
+                key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -80,7 +80,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     ),
                     SizedBox(height: 20),
                     TextFormField(
-                      controller: _noteController,
+                      controller: noteController,
                       decoration: InputDecoration(
                         labelText: 'Note',
                         border: OutlineInputBorder(),
@@ -96,7 +96,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     ),
                     SizedBox(height: 20),
                     TextFormField(
-                      controller: _amountController,
+                      controller: amountController,
                       decoration: InputDecoration(
                         labelText: 'Amount',
                         border: OutlineInputBorder(),
@@ -121,27 +121,27 @@ class _NotesScreenState extends State<NotesScreen> {
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        DateFormat('yyyy-MM-dd').format(_selectedDate),
+                        DateFormat('yyyy-MM-dd').format(selectedDate),
                         style: TextStyle(fontSize: 22),
                       ),
                       trailing: Icon(Icons.calendar_today, size: 30),
                       onTap: () async {
                         final DateTime? picked = await showDatePicker(
                           context: context,
-                          initialDate: _selectedDate,
+                          initialDate: selectedDate,
                           firstDate: DateTime(2000),
                           lastDate: DateTime(2101),
                         );
-                        if (picked != null && picked != _selectedDate) {
+                        if (picked != null && picked != selectedDate) {
                           setState(() {
-                            _selectedDate = picked;
+                            selectedDate = picked;
                           });
                         }
                       },
                     ),
                     SizedBox(height: 20),
                     DropdownButtonFormField<String>(
-                      value: _selectedCategory,
+                      value: selectedCategory,
                       decoration: InputDecoration(
                         labelText: 'Category',
                         border: OutlineInputBorder(),
@@ -150,7 +150,7 @@ class _NotesScreenState extends State<NotesScreen> {
                       style: TextStyle(fontSize: 22, color: Colors.black),
                       onChanged: (String? newValue) {
                         setState(() {
-                          _selectedCategory = newValue!;
+                          selectedCategory = newValue!;
                         });
                       },
                       items: widget.categories.map<DropdownMenuItem<String>>(
@@ -181,13 +181,13 @@ class _NotesScreenState extends State<NotesScreen> {
                         SizedBox(width: 10),
                         ElevatedButton(
                           onPressed: () {
-                            if (_formKey.currentState!.validate()) {
+                            if (formKey.currentState!.validate()) {
                               setState(() {
                                 _notes.add({
-                                  'note': _noteController.text,
-                                  'amount': double.parse(_amountController.text),
-                                  'date': _selectedDate,
-                                  'category': _selectedCategory,
+                                  'note': noteController.text,
+                                  'amount': double.parse(amountController.text),
+                                  'date': selectedDate,
+                                  'category': selectedCategory,
                                 });
                               });
                               _saveNotes(); // Save notes to persistent storage
