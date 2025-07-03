@@ -25,11 +25,20 @@ class MainScreen extends StatefulWidget {
     required this.surveyResults,
   });
 
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }
 
+double _safePct(double part, double total) {
+  // return 0 if total is zero or negative, otherwise the real %
+  if (total <= 0) return 0;
+  return (part / total) * 100;
+}
+
 class _MainScreenState extends State<MainScreen> {
+  Timer? _midnightTimer;
+
   final ScrollController _scrollController = ScrollController();
   double _bannerOpacity = 1.0;
   double _bannerOffset = 0.0;
@@ -73,6 +82,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _initDaysLeft();
+    _scheduleMidnightTick();
 
     final User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -124,6 +134,7 @@ class _MainScreenState extends State<MainScreen> {
           _totalBalance  = (data['total'] ?? 0).toDouble();
           _monthlyBudgetLeft = (data['monthlyBudgetLeft'] ?? 0).toDouble();
           _monthlyBudgetTarget = (data['monthlyBudgetTarget'] ?? 0).toDouble();
+          _spent = (data['spent'] ?? 0).toDouble();
         });
       });
 
@@ -154,13 +165,41 @@ class _MainScreenState extends State<MainScreen> {
 
   void _initDaysLeft() {
     final now = DateTime.now();
-    if (_lastResetDate == null) {
-      _lastResetDate = DateTime(now.year, now.month, now.day);
-      _daysLeft = 30;
+
+    // First run or we switched to a new month?
+    if (_lastResetDate == null ||
+        now.year != _lastResetDate!.year ||
+        now.month != _lastResetDate!.month) {
+
+      // 1️⃣  Mark the first day of this month as the reset point
+      _lastResetDate = DateTime(now.year, now.month, 1);
+
+      // 2️⃣  Compute how many days remain
+      final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+      _daysLeft = daysInMonth - now.day + 1;      // inclusive of today
     } else {
-      final daysPassed = now.difference(_lastResetDate!).inDays;
-      _daysLeft = (30 - daysPassed).clamp(0, 30);
+      // We’re still in the same month → just recalc
+      final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+      _daysLeft = daysInMonth - now.day + 1;
     }
+  }
+
+  // Schedules a one-shot timer that fires 1 second after the next midnight.
+  void _scheduleMidnightTick() {
+    // cancel any leftover timer just in case
+    _midnightTimer?.cancel();
+
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    final durationUntilMidnight = nextMidnight.difference(now) + const Duration(seconds: 1);
+
+    _midnightTimer = Timer(durationUntilMidnight, () {
+      // refresh the counter and rebuild the UI
+      setState(_initDaysLeft);
+
+      // schedule the NEXT midnight
+      _scheduleMidnightTick();
+    });
   }
 
   void _resetDaysLeft() {
@@ -172,6 +211,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
+    _midnightTimer?.cancel();
     _catSub?.cancel();
     _balSub?.cancel();
     _trxSub?.cancel();
@@ -656,7 +696,6 @@ class _MainScreenState extends State<MainScreen> {
               print('❌ addTransaction failed: $e\n$st');
             }
 
-            _resetDaysLeft();
           },
         ),
       ),
@@ -853,11 +892,11 @@ class _MainScreenState extends State<MainScreen> {
                             leftValue: '${_monthlyBudgetLeft.toStringAsFixed(0)} LE',
                             leftIcon: Icons.savings,
                             leftAccent: _currentTheme.secondary,
-                            leftPercentage: '${((_monthlyBudgetLeft / _totalBalance) * 100).toStringAsFixed(0)}%',
+                            leftPercentage : '${_safePct(_monthlyBudgetLeft, _totalBalance).toStringAsFixed(0)}%',
                             rightTitle: 'Spending',
                             rightValue: '${_spent.toStringAsFixed(0)} LE',
                             rightAccent: _currentTheme.tertiary,
-                            rightPercentage: '${((_spent / _totalBalance) * 100).toStringAsFixed(0)}%',
+                            rightPercentage: '${_safePct(_spent, _totalBalance).toStringAsFixed(0)}%',
                             showRightIcon: false,
                             percentInline: true,
                           ),
