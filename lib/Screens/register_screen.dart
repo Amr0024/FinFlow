@@ -109,6 +109,11 @@ class RegisterScreen extends StatelessWidget {
         color: Colors.blue.value,
         icon : Icons.receipt.codePoint,
       );
+      await FirestoreService.addCategory(
+        name : 'Entertainment',
+        color: Colors.purple.value,
+        icon : Icons.movie.codePoint,
+      );
 
       // ---------- 5)  go to Survey  ----------
       Navigator.pushReplacement(

@@ -174,4 +174,62 @@ class FirestoreService {
 
     await batch.commit();
   }
+
+  // ──────────────────────────── FINANCIAL GOALS ────────────────────────────
+  static Future<List<Map<String, dynamic>>> getFinancialGoals() async {
+    final doc = await _db.collection('users').doc(_uid).get();
+    final data = doc.data() ?? {};
+    final goals = data['financialGoals'] as List<dynamic>?;
+    if (goals == null) return [];
+    return goals.map((g) => Map<String, dynamic>.from(g)).toList();
+  }
+
+  static Future<void> setFinancialGoals(List<Map<String, dynamic>> goals) async {
+    await _db.collection('users').doc(_uid).set({
+      'financialGoals': goals,
+    }, SetOptions(merge: true));
+  }
+
+  // ──────────────────────────── SAVINGS ────────────────────────────
+  static Future<void> addSavings({
+    required String goal,
+    required double amount,
+    required DateTime date,
+  }) async {
+    await _db.collection('users').doc(_uid).collection('savings').add({
+      'goal': goal,
+      'amount': amount,
+      'date': Timestamp.fromDate(date),
+    });
+  }
+
+  static Future<List<Map<String, dynamic>>> getSavings({String? goal}) async {
+    Query query = _db.collection('users').doc(_uid).collection('savings');
+    if (goal != null) {
+      query = query.where('goal', isEqualTo: goal);
+    }
+    final snap = await query.get();
+    return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+  }
+
+  // ──────────────────────────── SAVINGS CHART (for line chart) ────────────────────────────
+  static Future<List<Map<String, dynamic>>> getSavingsChartData() async {
+    final snap = await _db.collection('users').doc(_uid).collection('savings_chart').orderBy('month').get();
+    return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+  }
+
+  static Future<void> setSavingsChartData(List<Map<String, dynamic>> data) async {
+    final batch = _db.batch();
+    final col = _db.collection('users').doc(_uid).collection('savings_chart');
+    final docs = await col.get();
+    // Delete old docs
+    for (final doc in docs.docs) {
+      batch.delete(doc.reference);
+    }
+    // Add new data
+    for (final entry in data) {
+      batch.set(col.doc(), entry);
+    }
+    await batch.commit();
+  }
 }
