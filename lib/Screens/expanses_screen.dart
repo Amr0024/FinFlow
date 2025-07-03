@@ -1,447 +1,412 @@
 import 'package:flutter/material.dart';
-import 'dart:math'; // For Random
+import 'package:projects_flutter/services/firestore_services.dart'; // still here for saving
 
 class ExpansesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
-  final Function(String category, double amount, bool isNotPriority, String? productName, String? mandatoryLevel) onExpenseAdded;
+  final Function(
+      String category,
+      double amount,
+      bool isNotPriority,
+      String? productName,
+      String? mandatoryLevel,
+      ) onExpenseAdded;
 
-  ExpansesScreen({required this.categories, required this.onExpenseAdded});
+  const ExpansesScreen({
+    super.key,
+    required this.categories,
+    required this.onExpenseAdded,
+  });
 
   @override
-  _ExpansesScreenState createState() => _ExpansesScreenState();
+  State<ExpansesScreen> createState() => _ExpansesScreenState();
 }
 
 class _ExpansesScreenState extends State<ExpansesScreen> {
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _productNameController = TextEditingController();
-  String _selectedCategory = '';
-  bool _isNotPriority = false;
-  List<Map<String, dynamic>> _nonPriorityItems = [];
-  String _mandatoryLevel = ''; // Low, Medium, High
-  bool _showNonPriorityButton = false; // Controls visibility of "View Non-Priority Items" button
+  // ───────────────────────── controllers / state
+  final _amountCtrl      = TextEditingController();
+  final _productNameCtrl = TextEditingController();
 
+  /// The list shown in the drop‑down (defaults + user‑defined)
+  late List<Map<String, dynamic>> _cats;
+
+  String _selectedCatName = '';
+  bool   _isNotPriority   = false;
+  String _mandatoryLevel  = '';
+  bool   _showNPBtn       = false;
+
+  final List<Map<String, dynamic>> _nonPriorityItems = [];
+
+  // ───────────────────────── fallback defaults (never saved to Firestore)
+  static const _defaultCats = <Map<String, dynamic>>[
+    {
+      'name': 'Entertainment',
+      'icon': Icons.movie,
+      'color': Colors.purple,
+    },
+    {
+      'name': 'Food',
+      'icon': Icons.fastfood,
+      'color': Colors.red,
+    },
+    {
+      'name': 'Fashion',
+      'icon': Icons.shopping_bag,
+      'color': Colors.teal,
+    },
+    {
+      'name': 'Bills',
+      'icon': Icons.receipt,
+      'color': Colors.blue,
+    },
+    {
+      'name': 'Add Custom…',            // special sentinel
+      'icon': Icons.add,
+      'color': Colors.grey,
+    },
+  ];
+
+  // ─────────────────────────── helper: current category Firestore id
+  String? _currentCatId() {
+    final cat = _cats.firstWhere(
+          (c) => c['name'] == _selectedCatName,
+      orElse: () => const {},          // no match → empty map
+    );
+
+    // guard: if there is no id or it isn’t a String, return null
+    final id = cat['id'];
+    return id is String ? id : null;
+  }
+
+  // initstate
   @override
   void initState() {
     super.initState();
-    // Set the default selected category to the first category in the list (excluding "Add Category")
-    if (widget.categories.isNotEmpty) {
-      _selectedCategory = widget.categories
-          .where((category) => category['name'] != 'Add Category')
-          .first['name'];
+
+    // Start with the built‑in defaults …
+    _cats = [..._defaultCats];
+
+    // merge categories coming from MainScreen / Firestore
+    for (final c in widget.categories) {
+      if (c['name'] == 'Add Custom…') continue;
+      final exists = _cats.any((d) => d['name'] == c['name']);
+      if (!exists) _cats.insert(_cats.length - 1, c);
+    }
+
+    // first real item as default selection
+    _selectedCatName =
+    _cats.firstWhere((c) => c['name'] != 'Add Custom…')['name'];
+  }
+
+  // UI helpers
+  Widget _amountField() => _labelAnd(
+    'Enter Amount',
+    TextField(
+      controller: _amountCtrl,
+      keyboardType: TextInputType.number,
+      decoration: _inputDeco('Enter Amount'),
+    ),
+  );
+
+  Widget _productNameField() => _labelAnd(
+    'Product Name',
+    TextField(
+      controller: _productNameCtrl,
+      decoration: _inputDeco('Enter Product Name'),
+    ),
+  );
+
+  Widget _categoryDropdown() => _labelAnd(
+    'Select Category',
+    DropdownButton<String>(
+      value: _selectedCatName,
+      isExpanded: true,
+      onChanged: _onCatChanged,
+      items: _cats.map<DropdownMenuItem<String>>((c) {
+        return DropdownMenuItem(
+          value: c['name'],
+          child: Row(
+            children: [
+              Icon(c['icon'], color: c['color']),
+              const SizedBox(width: 10),
+              Text(c['name']),
+            ],
+          ),
+        );
+      }).toList(),
+    ),
+  );
+
+  // category change / add custom
+  void _onCatChanged(String? newValue) async {
+    if (newValue == null) return;
+
+    if (newValue == 'Add Custom…') {
+      final created = await _showAddCatDialog();
+      if (created != null) {
+        await FirestoreService.addCategory(
+          name : created['name'],
+          icon : (created['icon'] as IconData).codePoint,
+          color: (created['color'] as Color).value,
+        );
+
+        setState(() {
+          _cats.insert(_cats.length - 1, created);
+          _selectedCatName = created['name'];
+        });
+      }
+    } else {
+      setState(() => _selectedCatName = newValue);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Add Expense',
-          style: TextStyle(fontSize: 24, color: Colors.white), // White text
-        ),
-        iconTheme: IconThemeData(color: Colors.white), // White arrow
-        flexibleSpace: Container(
-          height: 150, // Bigger banner
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.indigo[900]!, Colors.purple[800]!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              stops: [0.2, 0.8],
-              tileMode: TileMode.clamp,
-            ),
-          ),
-          child: CustomPaint(
-            size: Size(double.infinity, 150), // Bigger banner
-            painter: HollowCirclePainter(),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Future<Map<String, dynamic>?> _showAddCatDialog() {
+    final nameCtrl = TextEditingController();
+    IconData icon  = Icons.category;
+    Color    color = Colors.orange;
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('New Category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Enter Amount Box (always visible)
-            Text(
-              'Enter Amount',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
             TextField(
-              controller: _amountController,
-              decoration: InputDecoration(
-                hintText: 'Enter Amount',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              keyboardType: TextInputType.number,
+              controller: nameCtrl,
+              decoration: _inputDeco('Category name'),
             ),
-            SizedBox(height: 20),
-
-            // Category Section (visible before non-priority is selected)
-            if (!_isNotPriority) ...[
-              Text(
-                'Select Category',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              DropdownButton<String>(
-                value: _selectedCategory,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategory = newValue!;
-                  });
-                },
-                items: widget.categories
-                    .where((category) => category['name'] != 'Add Category')
-                    .map<DropdownMenuItem<String>>((category) {
-                  return DropdownMenuItem<String>(
-                    value: category['name'],
-                    child: Row(
-                      children: [
-                        Icon(category['icon'], color: category['color']),
-                        SizedBox(width: 10),
-                        Text(category['name']),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-              SizedBox(height: 20),
-            ],
-
-            // Non-Priority Checkbox
-            CheckboxListTile(
-              title: Text('Not a Priority Expense'),
-              value: _isNotPriority,
-              onChanged: (bool? value) {
-                setState(() {
-                  _isNotPriority = value!;
-                  // Reset selected category when toggling non-priority
-                  _selectedCategory = widget.categories
-                      .where((category) => category['name'] != 'Add Category')
-                      .first['name'];
-                });
-              },
-            ),
-
-            if (_isNotPriority) ...[
-              // Product Name
-              Text(
-                'Product Name',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _productNameController,
-                decoration: InputDecoration(
-                  hintText: 'Enter Product Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              children: [
+                Colors.red,
+                Colors.green,
+                Colors.blue,
+                Colors.orange,
+                Colors.purple,
+              ].map((c) {
+                return GestureDetector(
+                  onTap: () => setState(() => color = c),
+                  child: CircleAvatar(
+                    backgroundColor: c,
+                    radius: 14,
+                    child: color == c ? const Icon(Icons.check, size: 16) : null,
                   ),
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // How Mandatory
-              Text(
-                'How Mandatory Was This Item?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              Column(
-                children: [
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _mandatoryLevel == 'Low',
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _mandatoryLevel = value! ? 'Low' : '';
-                          });
-                        },
-                      ),
-                      Text('Low'),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _mandatoryLevel == 'Medium',
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _mandatoryLevel = value! ? 'Medium' : '';
-                          });
-                        },
-                      ),
-                      Text('Medium'),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _mandatoryLevel == 'High',
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _mandatoryLevel = value! ? 'High' : '';
-                          });
-                        },
-                      ),
-                      Text('High'),
-                    ],
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-
-              // Category List (only for non-priority)
-              Text(
-                'Category (Optional)',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              DropdownButton<String>(
-                value: _selectedCategory,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategory = newValue!;
-                  });
-                },
-                items: [
-                  ...widget.categories
-                      .where((category) => category['name'] != 'Add Category')
-                      .map<DropdownMenuItem<String>>((category) {
-                    return DropdownMenuItem<String>(
-                      value: category['name'],
-                      child: Row(
-                        children: [
-                          Icon(category['icon'], color: category['color']),
-                          SizedBox(width: 10),
-                          Text(category['name']),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  DropdownMenuItem(
-                    value: 'None',
-                    child: Text('None'),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-            ],
-
-            // Add Expense Button
-            Container(
-              width: double.infinity,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.indigo[900]!, Colors.purple[800]!],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_amountController.text.isEmpty || _selectedCategory.isEmpty) {
-                    // Show error if amount or category is not selected
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Please enter an amount and select a category.'),
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (_isNotPriority && _productNameController.text.isEmpty) {
-                    // Show error if product name is not entered for non-priority expenses
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Please enter a product name.'),
-                      ),
-                    );
-                    return;
-                  }
-
-                  // Add expense
-                  double amount = double.parse(_amountController.text);
-                  widget.onExpenseAdded(
-                    _selectedCategory,
-                    amount,
-                    _isNotPriority,
-                    _isNotPriority ? _productNameController.text : null,
-                    _isNotPriority ? _mandatoryLevel : null,
-                  );
-
-                  // If it's a non-priority expense, add it to the _nonPriorityItems list
-                  if (_isNotPriority) {
-                    setState(() {
-                      _nonPriorityItems.add({
-                        'name': _productNameController.text,
-                        'amount': amount,
-                        'category': _selectedCategory,
-                        'mandatoryLevel': _mandatoryLevel,
-                      });
-                    });
-                  }
-
-                  // Reset all form fields (including non-priority checkbox)
-                  setState(() {
-                    _amountController.clear();
-                    _productNameController.clear();
-                    _mandatoryLevel = '';
-                    _selectedCategory = widget.categories
-                        .where((category) => category['name'] != 'Add Category')
-                        .first['name']; // Reset to default category
-                    _isNotPriority = false; // Reset non-priority checkbox
-                    _showNonPriorityButton = true; // Show the "View Non-Priority Items" button
-                  });
-
-                  // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Expense added successfully!'),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Add Expense',
-                  style: TextStyle(color: Colors.white), // White text
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-
-            // View Non-Priority Items Button
-            if (_showNonPriorityButton) ...[
-              Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.indigo[900]!, Colors.purple[800]!],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Show non-priority items in a dialog
-                    showDialog(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: Text('Non-Priority Items'),
-                          content: SingleChildScrollView(
-                            child: Column(
-                              children: _nonPriorityItems.map((item) {
-                                return ListTile(
-                                  title: Text(item['name']),
-                                  subtitle: Text(
-                                    'Amount: \$${item['amount'].toStringAsFixed(2)}\n'
-                                        'Category: ${item['category']}\n'
-                                        'Mandatory: ${item['mandatoryLevel']}',
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              child: Text('Close'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                  child: Text(
-                    'View Non-Priority Items',
-                    style: TextStyle(color: Colors.white), // White text
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+                );
+              }).toList(),
+            )
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notes),
-            label: 'Notes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isEmpty) return;
+              Navigator.pop<Map<String, dynamic>>(context, {
+                'name' : nameCtrl.text.trim(),
+                'icon' : icon,
+                'color': color,
+              });
+            },
+            child: const Text('Add'),
           ),
         ],
-        currentIndex: 0,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pop(context); // Go back to the home screen
-          }
-        },
       ),
     );
   }
-}
 
-// Custom painter for hollow circles (used in the banner)
-class HollowCirclePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.1) // Light white color for circles
-      ..style = PaintingStyle.stroke // Hollow circles
-      ..strokeWidth = 2; // Circle border width
+  Widget _nonPriorityToggle() => CheckboxListTile(
+    title: const Text('Not a Priority Expense'),
+    value: _isNotPriority,
+    onChanged: (v) => setState(() {
+      _isNotPriority = v ?? false;
+      if (!_isNotPriority) _mandatoryLevel = '';
+    }),
+  );
 
-    final Random random = Random(); // Initialize Random
+  Widget _mandatoryChoices() => _labelAnd(
+    'How Mandatory Was This Item?',
+    Column(
+      children: ['Low', 'Medium', 'High'].map((lvl) {
+        return Row(
+          children: [
+            Checkbox(
+              value: _mandatoryLevel == lvl,
+              onChanged: (v) => setState(() => _mandatoryLevel = v! ? lvl : ''),
+            ),
+            Text(lvl),
+          ],
+        );
+      }).toList(),
+    ),
+  );
 
-    // Draw multiple circles
-    for (int i = 0; i < 50; i++) {
-      final double radius = 20 + i * 10; // Vary the radius
-      final double x = size.width * (i % 10) / 10; // Spread horizontally
-      final double y = size.height * (i % 5) / 5; // Spread vertically
+  Widget _addExpenseButton() => SizedBox(
+    width: double.infinity,
+    height: 50,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      onPressed: _handleAddExpense,
+      child: const Text('Add Expense', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+    ),
+  );
 
-      canvas.drawCircle(Offset(x, y), radius, paint);
+  // ───────────────────────────── helper widgets
+  InputDecoration _inputDeco(String hint) => InputDecoration(
+    hintText: hint,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+  );
+
+  Widget _labelAnd(String label, Widget field) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 10),
+      field,
+      const SizedBox(height: 10),
+    ],
+  );
+
+  // ───────────────────────────── logic
+  Future<void> _handleAddExpense() async {
+    // 1) basic validation ────────────────────────────────────────────
+    if (_amountCtrl.text.isEmpty || _selectedCatName.isEmpty) {
+      _showSnack('Please enter an amount and select a category.');
+      return;
+    }
+    if (_isNotPriority && _productNameCtrl.text.isEmpty) {
+      _showSnack('Please enter a product name.');
+      return;
+    }
+
+    final amount = double.tryParse(_amountCtrl.text) ?? 0;
+
+    try {
+      // 2) write to Firestore (may throw) ────────────────────────────
+      await FirestoreService.addTransaction(
+        catId      : _currentCatId(),          // nullable for built‑ins
+        amount     : -amount.abs(),            // expenses are negative
+        notPriority: _isNotPriority,
+        productName: _isNotPriority ? _productNameCtrl.text : null,
+      );
+
+      // 3) update UI in memory (callback to MainScreen) ──────────────
+      widget.onExpenseAdded(
+        _selectedCatName,
+        amount,
+        _isNotPriority,
+        _isNotPriority ? _productNameCtrl.text : null,
+        _isNotPriority ? _mandatoryLevel       : null,
+      );
+
+      // 4) local list for non‑priority items (unchanged) ─────────────
+      if (_isNotPriority) {
+        _nonPriorityItems.add({
+          'name'          : _productNameCtrl.text,
+          'amount'        : amount,
+          'category'      : _selectedCatName,
+          'mandatoryLevel': _mandatoryLevel,
+        });
+      }
+
+      // 5) reset form fields ─────────────────────────────────────────
+      setState(() {
+        _amountCtrl.clear();
+        _productNameCtrl.clear();
+        _mandatoryLevel = '';
+        _isNotPriority  = false;
+        _showNPBtn      = _nonPriorityItems.isNotEmpty;
+      });
+
+      // 6) tell user *before* leaving the page, then pop ─────────────
+      if (mounted) {
+        _showSnack('Expense added successfully!');
+        Navigator.pop(context);               // back to MainScreen
+      }
+    } catch (e) {
+      // Any Firestore / network error ends up here
+      if (mounted) {
+        _showSnack('Failed to add expense. Please try again.\n$e');
+      }
     }
   }
 
+  void _showSnack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+  // ───────────────────────────────────────── build
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // No need to repaint
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Add Expense', style: TextStyle(color: Colors.white)),
+      iconTheme: const IconThemeData(color: Colors.white),
+      backgroundColor: Colors.indigo,
+    ),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _amountField(),
+          _productNameField(),
+          _categoryDropdown(),
+          _nonPriorityToggle(),
+          if (_isNotPriority) _mandatoryChoices(),
+          const SizedBox(height: 10),
+          _addExpenseButton(),
+          const SizedBox(height: 30),
+          if (_showNPBtn) _viewNonPriorityButton(),
+        ],
+      ),
+    ),
+  );
+
+  Widget _viewNonPriorityButton() => SizedBox(
+    width: double.infinity,
+    height: 50,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      onPressed: () => showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Non‑Priority Items'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: _nonPriorityItems
+                  .map((i) => ListTile(
+                title: Text(i['name']),
+                subtitle: Text(
+                  'Amount: LE${i['amount'].toStringAsFixed(2)}\n'
+                      'Category: ${i['category']}\n'
+                      'Mandatory: ${i['mandatoryLevel']}',
+                ),
+              ))
+                  .toList(),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ],
+        ),
+      ),
+      child: const Text('View Non‑Priority Items'),
+    ),
+  );
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _productNameCtrl.dispose();
+    super.dispose();
   }
 }

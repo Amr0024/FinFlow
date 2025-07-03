@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "156960955122",
+    "project_id": "fin-flow-26m8k6",
+    "storage_bucket": "fin-flow-26m8k6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156960955122:android:4f9528e59c645baff00e6b",
+        "android_client_info": {
+          "package_name": "com.example.projects_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcvoHVzv70itLH6AyvSJizVH9-FdPGb88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156960955122:android:d3d54fe3fd9417bcf00e6b",
+        "android_client_info": {
+          "package_name": "com.mycompany.finflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcvoHVzv70itLH6AyvSJizVH9-FdPGb88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main_screen.dart'; // Import the main screen
 import 'dart:math'; // Import for Random and pi
 
 class SurveyScreen extends StatefulWidget {
+  const SurveyScreen({super.key});
+
   @override
   _SurveyScreenState createState() => _SurveyScreenState();
 }
 
 class _SurveyScreenState extends State<SurveyScreen> {
   int _currentQuestionIndex = 0;
-  Map<String, dynamic> _surveyResults = {};
-  Set<String> _selectedGoals = {}; // Store selected financial goals
+  final Map<String, dynamic> _surveyResults = {};
+  final Set<String> _selectedGoals = {}; // Store selected financial goals
 
   final List<Map<String, dynamic>> _questions = [
     {
@@ -19,14 +23,14 @@ class _SurveyScreenState extends State<SurveyScreen> {
     },
     {
       'question': 'On average, how much do you spend daily?',
-      'options': ['Less than \$20', '\$20-\$50', '\$50-\$100', 'More than \$100'],
+      'options': ['Less than \L20', '\LE20-\LE50', '\L\E50-\L\E100', 'More than \L\E100'],
     },
     {
       'question': 'On average, how much do you spend monthly?',
-      'options': ['Less than \$500', '\$500-\$1000', '\$1000-\$2000', 'More than \$2000'],
+      'options': ['Less than \L\E500', '\LE500-\L\E1000', '\L\E1000-\L\E2000', 'More than \L\E2000'],
     },
     {
-      'question': 'What is your age?',
+      'question': 'How old are you?',
       'options': ['Under 18', '18-24', '25-34', '35-44', '45-54', '55+'],
     },
     {
@@ -48,8 +52,8 @@ class _SurveyScreenState extends State<SurveyScreen> {
       'options': ['Own Car', 'Public Transportation', 'Both', 'Neither'],
     },
     {
-      'question': 'How often do you want to track your expenses?',
-      'options': ['Daily', 'Weekly', 'Monthly'],
+      'question': 'How often do you track your expenses?',
+      'options': ['Daily', 'Weekly', 'Monthly', 'Never'],
     },
     {
       'question': 'What are your financial goals? (Select two that apply)',
@@ -105,20 +109,48 @@ class _SurveyScreenState extends State<SurveyScreen> {
     });
   }
 
-  void _submitSurvey() {
+  Future<void> _submitSurvey() async {
     // Save the selected financial goals to the survey results
     _surveyResults['Financial Goals'] = _selectedGoals.toList();
 
-    // Handle survey submission
-    print(_surveyResults); // For debugging
+    // OPTIONAL: Debug print in console
+    print('Final Survey Results: $_surveyResults');
 
-    // Navigate to the main screen and pass the selected goals and survey results
+    // ---------------------------
+    // 1) Store in Firestore
+    // ---------------------------
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        // Merge the surveyResults so we don't overwrite the doc
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(
+          {
+            'surveyResults': _surveyResults,
+          },
+          SetOptions(merge: true), // Merges fields instead of overwriting
+        );
+        print('Survey data stored for uid: ${user.uid}');
+      } catch (e) {
+        print('Error saving survey data: $e');
+        // You could show a snack bar or handle this error
+      }
+    } else {
+      print('No user is logged in while submitting the survey.');
+      // Possibly navigate to a login screen
+    }
+
+    // ---------------------------
+    // 2) Navigate to MainScreen
+    // ---------------------------
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => MainScreen(
           selectedGoals: _selectedGoals.toList(),
-          surveyResults: _surveyResults, // Pass surveyResults here
+          surveyResults: _surveyResults, // Pass entire map
         ),
       ),
     );
@@ -141,8 +173,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
               ),
             ),
             child: CustomPaint(
-              size: Size.infinite,
-              painter: HollowCirclePainter(),
+              size: Size.infinite
             ),
           ),
           // Content
@@ -162,49 +193,47 @@ class _SurveyScreenState extends State<SurveyScreen> {
                         'assets/images/finflow_logo.png', // Replace with your image path
                         height: 150,
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20, width: 20),
                       // Progress Indicator
                       LinearProgressIndicator(
                         value: (_currentQuestionIndex + 1) / _questions.length,
                         backgroundColor: Colors.white.withOpacity(0.3),
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20, width: 20),
                       // Question
                       Text(
                         _questions[_currentQuestionIndex]['question'],
-                        style: TextStyle(
+                        style: const TextStyle(
+                          fontFamily: 'Helvetica',
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 40),
-                      // Buttons for options
+                      const SizedBox(height: 40, width: 20),
+                      // Options
                       if (_questions[_currentQuestionIndex]['multiple'] == true)
                         ..._questions[_currentQuestionIndex]['options'].map<Widget>((option) {
                           return Container(
                             width: double.infinity,
-                            margin: EdgeInsets.symmetric(vertical: 10),
+                            margin: const EdgeInsets.symmetric(vertical: 10),
                             child: ElevatedButton(
                               onPressed: () => _answerQuestion(option),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _selectedGoals.contains(option)
                                     ? Colors.purple.withOpacity(0.5)
-                                    : Colors.transparent,
-                                padding: EdgeInsets.symmetric(vertical: 20),
+                                    : Colors.black.withOpacity(0.2),
+                                padding: const EdgeInsets.symmetric(vertical: 20),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  side: BorderSide(color: Colors.white, width: 2),
+                                  side: const BorderSide(color: Colors.white, width: 0),
                                 ),
                               ),
                               child: Text(
                                 option,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.white,
-                                ),
+                                style: const TextStyle(fontFamily: 'Helvetica' ,fontSize: 18, color: Colors.white),
                               ),
                             ),
                           );
@@ -213,23 +242,21 @@ class _SurveyScreenState extends State<SurveyScreen> {
                         ..._questions[_currentQuestionIndex]['options'].map<Widget>((option) {
                           return Container(
                             width: double.infinity,
-                            margin: EdgeInsets.symmetric(vertical: 10),
+                            margin: const EdgeInsets.symmetric(vertical: 10),
                             child: ElevatedButton(
                               onPressed: () => _answerQuestion(option),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                padding: EdgeInsets.symmetric(vertical: 20),
+                                backgroundColor: Colors.black.withOpacity(0.4),
+                                elevation: 2.0,
+                                shadowColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 20),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  side: BorderSide(color: Colors.white, width: 2),
                                 ),
                               ),
                               child: Text(
                                 option,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.white,
-                                ),
+                                style: const TextStyle(fontFamily: 'Helvetica', fontWeight: FontWeight.bold ,fontSize: 18, color: Colors.white),
                               ),
                             ),
                           );
@@ -247,28 +274,25 @@ class _SurveyScreenState extends State<SurveyScreen> {
 }
 
 // Custom painter for hollow circles
-class HollowCirclePainter extends CustomPainter {
+/*class HollowCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.1) // Light white color for circles
-      ..style = PaintingStyle.stroke // Hollow circles
-      ..strokeWidth = 2; // Circle border width
+      ..color = Colors.white.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
 
     final Random random = Random();
 
     // Draw multiple circles
     for (int i = 0; i < 50; i++) {
-      final double radius = 20 + i * 10; // Vary the radius
-      final double x = size.width * (i % 10) / 10; // Spread horizontally
-      final double y = size.height * (i % 5) / 5; // Spread vertically
-
+      final double radius = 20 + i * 10;
+      final double x = size.width * (i % 10) / 10;
+      final double y = size.height * (i % 5) / 5;
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // No need to repaint
-  }
-}
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}*/

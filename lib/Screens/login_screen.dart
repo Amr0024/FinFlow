@@ -1,55 +1,275 @@
-// login_screen.dart
 import 'package:flutter/material.dart';
-import 'survey_screen.dart'; // Import the survey screen
+import 'package:flutter/services.dart';
+import 'package:projects_flutter/Screens/register_screen.dart';
+import 'survey_screen.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart'; // <-- For Google
+//import 'package:flutter_facebook_auth/flutter_facebook_auth.dart'; // <-- For Facebook
+
+import 'main_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void _login(BuildContext context) {
+  LoginScreen({super.key});
+
+  // ------------------------------------------------------
+  // 1) Normal Email/Password login
+  // ------------------------------------------------------
+  void _login(BuildContext context) async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    //finflow@gmail.com pw: 123
-    if (email == 'aa' && password == '123') {
-      // Navigate to the survey screen after successful login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => SurveyScreen()),
-      );
-    } else {
-      // Show an error message if credentials are incorrect
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid email or password'),
+        const SnackBar(
+          content: Text('Please enter email and password'),
           backgroundColor: Colors.red,
         ),
+      );
+      return;
+    }
+
+    try {
+      // Sign in with Firebase Auth using email/password
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data() as Map<String, dynamic>;
+
+          if (data['surveyResults'] != null) {
+            final surveyResults = Map<String, dynamic>.from(data['surveyResults']);
+            final selectedGoals = surveyResults['Financial Goals'] != null
+                ? List<String>.from(surveyResults['Financial Goals'])
+                : <String>[];
+
+            // Navigate to MainScreen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MainScreen(
+                  selectedGoals: selectedGoals,
+                  surveyResults: surveyResults,
+                ),
+              ),
+            );
+          } else {
+            // doc has no survey data => go to SurveyScreen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SurveyScreen()),
+            );
+          }
+        } else {
+          // doc doesn't exist => new user => go to Survey
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SurveyScreen()),
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('Sign in error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign In Failed: ${e.message}')),
       );
     }
   }
 
+  // ------------------------------------------------------
+  // 2) Google Sign-In
+  // ------------------------------------------------------
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        // user canceled the sign-in
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with this credential
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = userCredential.user;
+      if (user != null) {
+        // Check if Firestore doc exists for this user
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data() as Map<String, dynamic>;
+          if (data['surveyResults'] != null) {
+            final surveyResults = Map<String, dynamic>.from(data['surveyResults']);
+            final selectedGoals = surveyResults['Financial Goals'] != null
+                ? List<String>.from(surveyResults['Financial Goals'])
+                : <String>[];
+
+            // Navigate to MainScreen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MainScreen(
+                  selectedGoals: selectedGoals,
+                  surveyResults: surveyResults,
+                ),
+              ),
+            );
+          } else {
+            // no survey => go to Survey
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SurveyScreen()),
+            );
+          }
+        } else {
+          // doc doesn't exist => new user => go to Survey
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const SurveyScreen()),
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('Google sign-in error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In Failed: ${e.message}')),
+      );
+    } catch (e) {
+      print('Other Google sign-in error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In Error: $e')),
+      );
+    }
+  }
+
+  // ------------------------------------------------------
+  // 3) Facebook Sign-In
+  // ------------------------------------------------------
+  /*Future<void> _signInWithFacebook(BuildContext context) async {
+    try {
+      // Trigger the sign-in flow
+      final LoginResult result = await FacebookAuth.instance.login();
+
+      if (result.status == LoginStatus.success) {
+        // get the access token
+        final AccessToken accessToken = result.accessToken!;
+        final credential = FacebookAuthProvider.credential(accessToken.token);
+
+        // Sign in to Firebase
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        final user = userCredential.user;
+        if (user != null) {
+          // Check if Firestore doc exists for this user
+          final docSnapshot = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          if (docSnapshot.exists) {
+            final data = docSnapshot.data() as Map<String, dynamic>;
+            if (data['surveyResults'] != null) {
+              final surveyResults = Map<String, dynamic>.from(data['surveyResults']);
+              final selectedGoals = surveyResults['Financial Goals'] != null
+                  ? List<String>.from(surveyResults['Financial Goals'])
+                  : <String>[];
+
+              // Navigate to MainScreen
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MainScreen(
+                    selectedGoals: selectedGoals,
+                    surveyResults: surveyResults,
+                  ),
+                ),
+              );
+            } else {
+              // doc has no survey => go to Survey
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const SurveyScreen()),
+              );
+            }
+          } else {
+            // doc doesn't exist => new user => go to Survey
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SurveyScreen()),
+            );
+          }
+        }
+      } else if (result.status == LoginStatus.cancelled) {
+        print('Facebook login cancelled by user.');
+      } else {
+        print('Facebook login failed: ${result.message}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Facebook Sign-In Failed: ${result.message}')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      print('Facebook sign-in error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Facebook Sign-In Failed: ${e.message}')),
+      );
+    } catch (e) {
+      print('Other Facebook sign-in error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Facebook Sign-In Error: $e')),
+      );
+    }
+  }
+*/
   @override
   Widget build(BuildContext context) {
+    // Force sign-out each time the login screen builds
+    FirebaseAuth.instance.signOut();
+
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Log In',
+          style: TextStyle(
+          fontFamily: 'Helvetica-Bold',
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),),
+        iconTheme: IconThemeData(color: Colors.white),
+        ),
       body: Stack(
         children: [
-          // Background with gradient and hollow circles
+          // gradient background
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.indigo[900]!, Colors.purple[800]!], // Dark blue to purple
+                colors: [Colors.indigo[900]!, Colors.purple[800]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                stops: [0.2, 0.8], // Smooth transition
-                tileMode: TileMode.clamp, // Prevents weird lines
+                stops: const [0.2, 0.8],
               ),
             ),
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: HollowCirclePainter(),
-            ),
+            // You can also add a painter here if you like
           ),
-          // Content
+
           SafeArea(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -61,23 +281,27 @@ class LoginScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'Welcome back!',
                         style: TextStyle(
-                          fontSize: 28,
+                          fontFamily: 'Helvetica-Bold',
+                          fontSize: 35,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 5),
                       Text(
                         'Glad to see you again!',
                         style: TextStyle(
+                          fontFamily: 'Helvetica',
                           fontSize: 16,
                           color: Colors.white.withOpacity(0.8),
                         ),
                       ),
-                      SizedBox(height: 40),
+                      const SizedBox(height: 100),
+
+                      // Email
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
@@ -87,15 +311,17 @@ class LoginScreen extends StatelessWidget {
                           controller: _emailController,
                           decoration: InputDecoration(
                             labelText: 'Email',
-                            labelStyle: TextStyle(color: Colors.white),
+                            labelStyle: TextStyle(fontFamily: 'Helvetica', color: Colors.white),
                             border: InputBorder.none,
-                            prefixIcon: Icon(Icons.email, color: Colors.white),
+                            prefixIcon: Icon(Icons.mail, color: Colors.white),
                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
-                          style: TextStyle(color: Colors.white),
+                          style: const TextStyle(fontFamily: 'Helvetica', color: Colors.white),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
+
+                      // Password
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
@@ -104,87 +330,147 @@ class LoginScreen extends StatelessWidget {
                         child: TextField(
                           controller: _passwordController,
                           obscureText: true,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Password',
-                            labelStyle: TextStyle(color: Colors.white),
+                            labelStyle: TextStyle(fontFamily: 'Helvetica', color: Colors.white),
                             border: InputBorder.none,
-                            prefixIcon: Icon(Icons.lock, color: Colors.white),
+                            prefixIcon: Icon(CupertinoIcons.lock_fill, color: Colors.white),
                             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           ),
-                          style: TextStyle(color: Colors.white),
+                          style: const TextStyle(fontFamily: 'Helvetica', color: Colors.white),
                         ),
                       ),
-                      SizedBox(height: 20),
+
+                      const SizedBox(height: 2),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {
-                            // Handle forgot password
+                          onPressed: () async {
+                            final email = _emailController.text.trim();
+                            if (email.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Enter your email to reset password'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            } else {
+                              try {
+                                await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Password reset link sent to $email'),
+                                  ),
+                                );
+                              } on FirebaseAuthException catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
-                          child: Text(
+                          child: const Text(
                             'Forgot Password?',
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              fontFamily: 'Helvetica-Bold',
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 10),
+
+                      // Normal Log In Button
                       ElevatedButton(
                         onPressed: () => _login(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 15),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: Center(
                           child: Text(
-                            'Login',
+                            'Log In',
                             style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.indigo[900],
+                              fontFamily: 'Helvetica-Bold',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: Colors.black,
                             ),
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
+
+                      // "Or continue with"
                       Text(
                         'Or continue with',
                         style: TextStyle(
+                          fontFamily: 'Helvetica',
+                          fontSize: 16,
                           color: Colors.white.withOpacity(0.8),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 10),
+
+                      // Icons for Google & Facebook
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          // Google
                           IconButton(
-                            icon: Icon(Icons.g_mobiledata, size: 40, color: Colors.white),
-                            onPressed: () {
-                              // Handle Google login
-                            },
+                            icon: const Icon(Icons.g_mobiledata, size: 70, color: Colors.white),
+                            onPressed: () => _signInWithGoogle(context),
+                            style: ButtonStyle(
+                              overlayColor: MaterialStateProperty.resolveWith<Color?>((states){
+                                if(states.contains(MaterialState.pressed)){
+                                  return Colors.grey;
+                                }
+                                return null;
+                              })
+                            ),
                           ),
+
+                          // Facebook
                           IconButton(
-                            icon: Icon(Icons.facebook, size: 40, color: Colors.white),
+                            icon: const Icon(Icons.facebook, size: 40, color: Colors.white),
                             onPressed: () {
-                              // Handle Facebook login
+                              //_signInWithFacebook(context);
                             },
                           ),
                         ],
                       ),
-                      SizedBox(height: 20),
+
+                      const SizedBox(height: 0),
+
+                      // Register button
                       TextButton(
                         onPressed: () {
-                          // Handle registration
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          );
                         },
                         child: RichText(
                           text: TextSpan(
                             text: "Don't have an account? ",
-                            style: TextStyle(color: Colors.white.withOpacity(0.8)),
-                            children: [
+                            style: TextStyle(
+                              fontFamily: 'Helvetica',
+                              fontSize: 16,
+                              color: Colors.white.withOpacity(0.8),
+                            ),
+                            children: const [
                               TextSpan(
                                 text: 'Register Now',
                                 style: TextStyle(
+                                  fontFamily: 'Helvetica-Bold',
+                                  fontSize: 16,
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -202,30 +488,5 @@ class LoginScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// Custom painter for hollow circles
-class HollowCirclePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = Colors.white.withOpacity(0.1) // Light white color for circles
-      ..style = PaintingStyle.stroke // Hollow circles
-      ..strokeWidth = 2; // Circle border width
-
-    // Draw multiple circles
-    for (int i = 0; i < 50; i++) {
-      final double radius = 20 + i * 10; // Vary the radius
-      final double x = size.width * (i % 10) / 10; // Spread horizontally
-      final double y = size.height * (i % 5) / 5; // Spread vertically
-
-      canvas.drawCircle(Offset(x, y), radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // No need to repaint
   }
 }
