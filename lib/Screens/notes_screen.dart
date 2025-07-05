@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../theme/app_theme.dart';
 
 class NotesScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
+  final int themeIndex;
+  final Function(int)? onThemeUpdated;
 
-  const NotesScreen({super.key, required this.categories});
+  const NotesScreen({
+    super.key, 
+    required this.categories,
+    this.themeIndex = 0,
+    this.onThemeUpdated,
+  });
 
   @override
   _NotesScreenState createState() => _NotesScreenState();
@@ -269,34 +277,7 @@ class _NotesScreenState extends State<NotesScreen> {
           child: Icon(Icons.add, size: 50),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notes),
-            label: 'Notes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Reports',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-        currentIndex: 1,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pop(context); // Go back to the home screen
-          }
-        },
-      ),
+      // No bottom navigation here - it's handled by the parent container
     );
   }
 }

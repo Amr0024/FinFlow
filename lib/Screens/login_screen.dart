@@ -8,7 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // <-- For Google
 //import 'package:flutter_facebook_auth/flutter_facebook_auth.dart'; // <-- For Facebook
 
-import 'main_screen.dart';
+import '../widgets/navigation_wrapper.dart';
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
@@ -56,11 +56,11 @@ class LoginScreen extends StatelessWidget {
                 ? List<String>.from(surveyResults['Financial Goals'])
                 : <String>[];
 
-            // Navigate to MainScreen
+            // Navigate to NavigationWrapper
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => MainScreen(
+                builder: (context) => NavigationWrapper(
                   selectedGoals: selectedGoals,
                   surveyResults: surveyResults,
                 ),
@@ -124,11 +124,11 @@ class LoginScreen extends StatelessWidget {
                 ? List<String>.from(surveyResults['Financial Goals'])
                 : <String>[];
 
-            // Navigate to MainScreen
+            // Navigate to NavigationWrapper
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => MainScreen(
+                builder: (context) => NavigationWrapper(
                   selectedGoals: selectedGoals,
                   surveyResults: surveyResults,
                 ),
@@ -193,11 +193,11 @@ class LoginScreen extends StatelessWidget {
                   ? List<String>.from(surveyResults['Financial Goals'])
                   : <String>[];
 
-              // Navigate to MainScreen
+              // Navigate to NavigationWrapper
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => MainScreen(
+                  builder: (context) => NavigationWrapper(
                     selectedGoals: selectedGoals,
                     surveyResults: surveyResults,
                   ),

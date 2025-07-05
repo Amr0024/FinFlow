@@ -144,7 +144,11 @@ class FirestoreService {
     required double amount, // + = income,  – = expense
     bool notPriority = false,
     String? productName,
+    String? catName,
   }) async {
+    // Enforce negative for expenses
+    if (amount > 0) amount = -amount;
+    print('[DEBUG] FirestoreService.addTransaction: catId=$catId, amount=$amount');
     final userDoc = _db.collection('users').doc(_uid);
     final batch = _db.batch();
 
@@ -156,6 +160,7 @@ class FirestoreService {
       'createdAt': FieldValue.serverTimestamp(),
       'notPriority': notPriority,
       'productName': productName,
+      'catName': catName ?? '',
     });
 
     // 2) running balance
@@ -168,7 +173,7 @@ class FirestoreService {
     if (catId != null && amount < 0) {
       final catRef = userDoc.collection('categories').doc(catId);
       batch.set(catRef, { // create if missing
-        'budget': FieldValue.increment(amount.abs()),
+        'budget': FieldValue.increment(amount),
       }, SetOptions(merge: true));
     }
 
@@ -231,5 +236,20 @@ class FirestoreService {
       batch.set(col.doc(), entry);
     }
     await batch.commit();
+  }
+
+  /// Utility: Fix all existing transactions by making all positive expense amounts negative
+  static Future<void> fixExistingTransactionData() async {
+    final txCol = _db.collection('users').doc(_uid).collection('transactions');
+    final snap = await txCol.get();
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+      // If amount is positive and notPriority is false (i.e., an expense), make it negative
+      final isExpense = !(data['notPriority'] as bool? ?? false);
+      if (amount > 0 && isExpense) {
+        await doc.reference.update({'amount': -amount});
+      }
+    }
   }
 }

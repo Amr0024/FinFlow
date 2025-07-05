@@ -4,7 +4,15 @@ import '../theme/app_theme.dart';
 
 class FinancialGoalsScreen extends StatefulWidget {
   final ColorScheme colorScheme;
-  const FinancialGoalsScreen({super.key, required this.colorScheme});
+  final int themeIndex;
+  final Function(int)? onThemeUpdated;
+  
+  const FinancialGoalsScreen({
+    super.key, 
+    required this.colorScheme,
+    this.themeIndex = 0,
+    this.onThemeUpdated,
+  });
 
   @override
   State<FinancialGoalsScreen> createState() => _FinancialGoalsScreenState();
@@ -166,6 +174,7 @@ class _FinancialGoalsScreenState extends State<FinancialGoalsScreen> {
           elevation: 0,
           iconTheme: IconThemeData(color: colorScheme.onBackground),
         ),
+        // No bottom navigation here - it's handled by the parent container
         body: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => FocusScope.of(context).unfocus(),

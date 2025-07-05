@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'main_screen.dart'; // Import the main screen
+import '../widgets/navigation_wrapper.dart'; // Import the main screen
 import 'dart:math'; // Import for Random and pi
 
 class SurveyScreen extends StatefulWidget {
@@ -143,12 +143,12 @@ class _SurveyScreenState extends State<SurveyScreen> {
     }
 
     // ---------------------------
-    // 2) Navigate to MainScreen
+    // 2) Navigate to NavigationWrapper
     // ---------------------------
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => MainScreen(
+        builder: (context) => NavigationWrapper(
           selectedGoals: _selectedGoals.toList(),
           surveyResults: _surveyResults, // Pass entire map
         ),
