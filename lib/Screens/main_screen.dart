@@ -14,6 +14,7 @@ import '../widgets/finflow_line_chart.dart';
 import 'financial_goals_screen.dart';
 import 'notifications_page.dart';
 import 'settings_page.dart';
+import 'package:collection/collection.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
@@ -423,7 +424,7 @@ class _MainScreenState extends State<MainScreen> {
                 await FirestoreService.setBalance(
                     total: _totalBalance + newIncome,
                     monthlyBudgetLeft: _monthlyBudgetLeft + newIncome,
-                    monthlyBudgetTarget: _monthlyBudgetTarget + newIncome,
+                    monthlyBudgetTarget: _monthlyBudgetTarget,
                     spent: _spent,
                 );
                 Navigator.pop(context);
@@ -657,9 +658,6 @@ class _MainScreenState extends State<MainScreen> {
               // Update spent amount
               _spent += cost;
 
-              // Update monthly budget left
-              _monthlyBudgetLeft = (_monthlyBudgetLeft - cost).clamp(0.0, double.infinity);
-
               // Update category budget
               final idx = _categories.indexWhere((c) => c['name'] == catName);
               if (idx != -1 && (_categories[idx]['budget'] as double) > 0) {
@@ -667,18 +665,23 @@ class _MainScreenState extends State<MainScreen> {
                     (_categories[idx]['budget'] as double) - cost;
               }
 
+              final matchedCat = _categories.firstWhereOrNull((c) => c['name'] == catName);
+
+
               // Add to recent transactions
               _recentTransactions.insert(0, {
                 'category'     : isNotPriority && catName == 'None' ? productName! : catName,
                 'amount'       : cost,
-                'icon'         : isNotPriority
+                'icon' : isNotPriority
                     ? Icons.remove
-                    : _categories.firstWhere((c) => c['name'] == catName)['icon'],
-                'color'        : isNotPriority
+                    : (matchedCat?['icon'] as IconData?) ?? Icons.help_outline,
+                'color' : isNotPriority
                     ? Colors.grey
-                    : _categories.firstWhere((c) => c['name'] == catName)['color'],
+                    : (matchedCat?['color'] as Color?) ?? Colors.blueGrey,
                 'isNotPriority': isNotPriority,
                 'productName'  : productName,
+
+
               });
             });
 
@@ -1314,6 +1317,48 @@ class _MainScreenState extends State<MainScreen> {
       ],
     ),
   );
+  }
+
+  Widget _valueWithPct({
+    required String value,
+    required String pct,
+    required Color pctColor,
+    required Color numberColor,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: numberColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+              softWrap: false,
+              overflow: TextOverflow.fade,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          pct,
+          style: TextStyle(
+            color: pctColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
+          softWrap: false,
+          overflow: TextOverflow.fade,
+        ),
+      ],
+    );
   }
 
   Widget _buildWideBudgetCard({
