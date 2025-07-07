@@ -3,8 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
 
+
 class AccountDetailsPage extends StatefulWidget {
+
   const AccountDetailsPage({Key? key}) : super(key: key);
+
 
   @override
   State<AccountDetailsPage> createState() => _AccountDetailsPageState();
@@ -59,17 +62,17 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           padding: const EdgeInsets.all(20),
           children: [
             ListTile(
-              leading: Icon(Icons.person, color: colorScheme.primary),
+              leading: Icon(Icons.person, color: Colors.white),
               title: const Text('Name'),
               subtitle: Text('$_firstName $_lastName'),
             ),
             ListTile(
-              leading: Icon(Icons.account_circle, color: colorScheme.primary),
+              leading: Icon(Icons.account_circle, color:Colors.white),
               title: const Text('Username'),
               subtitle: Text(_username),
             ),
             ListTile(
-              leading: Icon(Icons.email, color: colorScheme.primary),
+              leading: Icon(Icons.email, color: Colors.white),
               title: const Text('Email'),
               subtitle: Text(_email),
             ),

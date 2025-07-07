@@ -117,11 +117,14 @@ class _MainScreenState extends State<MainScreen> {
           _categories = [
             ...snap.docs.map((d) {
               final data = d.data();
+              final rawIcon = data['icon'];
+              final icon = rawIcon is int
+                  ? IconData(rawIcon, fontFamily: 'MaterialIcons')
+                  : (rawIcon is IconData ? rawIcon : Icons.help_outline);
               return {
                 'id'    : d.id,
                 'name'  : data['name'] as String? ?? '',
-                'icon'  : IconData(data['icon'] as int? ?? 0,
-                    fontFamily: 'MaterialIcons'),
+                'icon' : icon,
                 'color' : Color(data['color'] as int? ?? 0xFF000000),
                 'budget': (data['budget'] as num?)?.toDouble() ?? 0.0,
               };
@@ -153,13 +156,14 @@ class _MainScreenState extends State<MainScreen> {
           _recentTransactions = snap.docs.map((d) {
             final data = d.data();
             final isNP = data['notPriority'] as bool? ?? false;
+            final rawIcon = data['icon'];
+            final icon = rawIcon is int
+                ? IconData(rawIcon, fontFamily: 'MaterialIcons')
+                : (rawIcon is IconData ? rawIcon : Icons.help_outline);
             return {
               'category'     : data['catName']     as String? ?? 'Unknown',
               'amount'       : (data['amount']     as num?)?.abs().toDouble() ?? 0.0,
-              'icon'         : isNP
-                  ? Icons.remove
-                  : IconData(data['icon'] as int? ?? 0,
-                  fontFamily: 'MaterialIcons'),
+              'icon'         : isNP ? Icons.remove : icon,
               'color'        : isNP
                   ? Colors.grey
                   : Color(data['color'] as int? ?? 0xFF000000),

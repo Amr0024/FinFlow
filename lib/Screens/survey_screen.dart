@@ -190,7 +190,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
                     children: [
                       // Image at the top
                       Image.asset(
-                        'assets/images/finflow_logo.png', // Replace with your image path
+                        'assets/images/survey_icon.png', // Replace with your image path
                         height: 150,
                       ),
                       const SizedBox(height: 20, width: 20),
