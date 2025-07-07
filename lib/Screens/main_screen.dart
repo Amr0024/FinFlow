@@ -240,14 +240,17 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onScroll() {
-    final off = _scrollController.offset;
+    double off = _scrollController.offset;
+    if (off < 0) off = 0;
+    // Ensure banner slides out completely based on its height
+    final maxOffset = _goalsBannerVisible ? 256.0 : 120.0;
     setState(() {
-      if (off > 100) {
+      if (off >= maxOffset) {
         _bannerOpacity = 0.0;
-        _bannerOffset  = 100;
-      } else {
-        _bannerOpacity = 1.0 - (off / 100);
-        _bannerOffset  = off;
+        _bannerOffset = maxOffset;
+    }else {
+        _bannerOpacity = 1.0 - (off / maxOffset);
+        _bannerOffset = off;
       }
     });
   }
@@ -885,7 +888,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             // scrollable content (from text file)
             Positioned(
-              top: _goalsBannerVisible ? 256 : 120,
+              top: (_goalsBannerVisible ? 256.0 : 120.0) - _bannerOffset,
               left: 0,
               right: 0,
               bottom: 0,
@@ -901,7 +904,7 @@ class _MainScreenState extends State<MainScreen> {
                       children: [
                           _buildWideBudgetCard(
                             leftTitle: 'Monthly Budget',
-                            leftValue: '${_totalBalance.toStringAsFixed(0)} LE',
+                            leftValue: '${_monthlyBudgetTarget.toStringAsFixed(0)} LE',
                             leftIcon: Icons.account_balance_wallet,
                             leftAccent: _currentTheme.primary,
                             rightTitle: 'Days Left',
@@ -915,11 +918,11 @@ class _MainScreenState extends State<MainScreen> {
                             leftValue: '${_monthlyBudgetLeft.toStringAsFixed(0)} LE',
                             leftIcon: Icons.savings,
                             leftAccent: _currentTheme.secondary,
-                            leftPercentage : '${_safePct(_monthlyBudgetLeft, _totalBalance).toStringAsFixed(0)}%',
+                            leftPercentage : '${_safePct(_monthlyBudgetLeft, _monthlyBudgetTarget).toStringAsFixed(0)}%',
                             rightTitle: 'Spending',
                             rightValue: '${_spent.toStringAsFixed(0)} LE',
                             rightAccent: _currentTheme.tertiary,
-                            rightPercentage: '${_safePct(_spent, _totalBalance).toStringAsFixed(0)}%',
+                            rightPercentage: '${_safePct(_spent, _monthlyBudgetTarget).toStringAsFixed(0)}%',
                             showRightIcon: false,
                             percentInline: true,
                           ),
@@ -1419,15 +1422,20 @@ class _MainScreenState extends State<MainScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
-                                    Text(
-                                      leftValue,
-                                      style: TextStyle(
-                                        color: numberColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 24,
+                                    Flexible(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          leftValue,
+                                          style: TextStyle(
+                                            color: numberColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 24,
+                                          )
+                                          ),
+                                        ),
                                       ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
                                     SizedBox(width: 8),
                                     Text(
                                       leftPercentage,
@@ -1443,14 +1451,17 @@ class _MainScreenState extends State<MainScreen> {
                               : Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      leftValue,
-                                      style: TextStyle(
-                                        color: numberColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 24,
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        leftValue,
+                                        style: TextStyle(
+                                          color: numberColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 24,
+                                        ),
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     if (leftPercentage != null && leftPercentage.isNotEmpty) ...[
                                       SizedBox(height: 2),
@@ -1506,14 +1517,19 @@ class _MainScreenState extends State<MainScreen> {
                             crossAxisAlignment: CrossAxisAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
                             children: [
-                              Text(
-                                rightValue,
-                                style: TextStyle(
-                                  color: numberColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    rightValue,
+                                    style: TextStyle(
+                                      color: numberColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 24,
+                                    ),
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
                               SizedBox(width: 8),
                               Text(
@@ -1530,14 +1546,17 @@ class _MainScreenState extends State<MainScreen> {
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                rightValue,
-                                style: TextStyle(
-                                  color: numberColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  rightValue,
+                                  style: TextStyle(
+                                    color: numberColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 24,
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
                               if (rightPercentage != null && rightPercentage.isNotEmpty) ...[
                                 SizedBox(height: 2),

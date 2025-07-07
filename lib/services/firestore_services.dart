@@ -118,7 +118,7 @@ class FirestoreService {
     return balRef.set({
       'total' : total,
       'monthlyBudgetLeft': monthlyBudgetLeft,
-      'monthlyBudgetTarget': monthlyBudgetLeft,
+      'monthlyBudgetTarget': monthlyBudgetTarget,
       'spent': spent,
     }, SetOptions(merge: true));
   }
@@ -169,6 +169,8 @@ class FirestoreService {
     final balRef = userDoc.collection('balance').doc('current');
     batch.set(balRef, { // set‑with‑merge ⇒ creates if absent
       'monthlyBudgetLeft': FieldValue.increment(amount),
+      if (amount < 0)
+        'spent': FieldValue.increment(-amount),
     }, SetOptions(merge: true));
 
     // 3) category budget
