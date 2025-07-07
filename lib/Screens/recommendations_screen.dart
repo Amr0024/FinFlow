@@ -23,7 +23,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   final _finGptService = FinGPTApiService();
 
   List<RecommendationModel> _recs = [];
-  List<dynamic> _tips = [];
+  List<String> _tips = [];
   bool _loading = true;
   String? _error;
 
@@ -41,7 +41,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
       final recs = await _forecastService.fetchRecommendations(uid);
-      final tips = await _finGptService.getRecommendations();
+      final List<String> tips = await _finGptService.getRecommendations();
       setState(() {
         _recs = recs;
         _tips = tips;
@@ -65,7 +65,14 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       content = const Center(child: CircularProgressIndicator());
     } else if (_error != null) {
       content = Center(
-        child: Text('Error: \$_error', style: AppTheme.getBodyStyle(scheme)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: scheme.error, size: 48),
+            const SizedBox(height: 12),
+            Text(_error!, style: AppTheme.getBodyStyle(scheme)),
+          ],
+        ),
       );
     } else {
       content = ListView(

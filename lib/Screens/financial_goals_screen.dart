@@ -212,8 +212,7 @@ class _FinancialGoalsScreenState extends State<FinancialGoalsScreen> {
                       children: [
                         // Main content (not Positioned)
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 24),
+                          padding: const EdgeInsets.fromLTRB(20, 24, 80, 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

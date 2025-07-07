@@ -1,4 +1,4 @@
-// lib/services/fingpt_api_service.dart
+// lib/services/fingpt_ai_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -35,9 +35,9 @@ class FinGPTApiService {
   }
 
   /// POST /recommend  { "uid": user.uid }
-  Future<List<dynamic>> getRecommendations() async {
+  Future<List<String>> getRecommendations() async {
     final user   = FirebaseAuth.instance.currentUser!;
-    final token  = await user.getIdToken();
+    final token  = await _getIdToken();
     final res = await http.post(
       Uri.parse('$_baseUrl/recommend'),
       headers: {
@@ -50,7 +50,7 @@ class FinGPTApiService {
       throw Exception('FinGPT recos error: ${res.statusCode}');
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    return body['recommendations'] as List<dynamic>;
+    return (body['recommendations'] as List<dynamic>).cast<String>();
   }
   Future<String?> _getIdToken() async =>
       FirebaseAuth.instance.currentUser!.getIdToken();

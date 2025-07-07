@@ -741,7 +741,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // status bar
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: _currentTheme.background,
+      statusBarColor: Colors.transparent,
       statusBarIconBrightness: _currentTheme.brightness == Brightness.dark
           ? Brightness.light
           : Brightness.dark,
@@ -750,16 +750,19 @@ class _MainScreenState extends State<MainScreen> {
           : Brightness.light,
     ));
 
-    return SafeArea(
-      child: Scaffold(
-        backgroundColor: _currentTheme.brightness == Brightness.dark
-            ? Color(0xFF1A202C)
-            : Color(0xFFE0E5EC),
-        body: Stack(
-          children: [
+    return Container(
+        decoration: BoxDecoration(
+          gradient: AppTheme.getPrimaryGradient(_currentTheme),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Stack(
+            children: [
             // banner with theme support (from text file)
             Positioned(
-              top: 0,
+              top: 40,
               left: 0,
               right: 0,
               child: Transform.translate(
@@ -772,7 +775,7 @@ class _MainScreenState extends State<MainScreen> {
                       gradient: AppTheme.getPrimaryGradient(_currentTheme),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -825,7 +828,7 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                           // Retractable goals section
                           if (_goalsBannerVisible) ...[
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 0),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -955,12 +958,40 @@ class _MainScreenState extends State<MainScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildQuickActionButton(Icons.attach_money, 'Add Income', Colors.green, _showAddIncomeDialog),
-                        _buildQuickActionButton(Icons.account_balance_wallet, 'Add Expense', _currentTheme.primary, _navigateToExpansesScreen),
-                        _buildQuickActionButton(Icons.calendar_today, 'Monthly Plan', _currentTheme.secondary, _showMonthlyPlanDialog),
-                        _buildQuickActionButton(Icons.bar_chart, 'Reports', _currentTheme.tertiary, () {
-                          Navigator.pushNamed(context, '/reports');
-                        }),
+                        Expanded(
+                          child: _buildQuickActionButton(
+                            Icons.attach_money,
+                            'Add Income',
+                            Colors.green,
+                            _showAddIncomeDialog,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildQuickActionButton(
+                            Icons.account_balance_wallet,
+                            'Add Expense',
+                            _currentTheme.primary,
+                            _navigateToExpansesScreen,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildQuickActionButton(
+                            Icons.calendar_today,
+                            'Monthly Plan',
+                            _currentTheme.secondary,
+                            _showMonthlyPlanDialog,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildQuickActionButton(
+                            Icons.bar_chart,
+                            'Reports',
+                            _currentTheme.tertiary,
+                                () {
+                              Navigator.pushNamed(context, '/reports');
+                            },
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -1356,6 +1387,7 @@ class _MainScreenState extends State<MainScreen> {
       GestureDetector(
         onTap: onPressed,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               decoration: BoxDecoration(
@@ -1382,6 +1414,9 @@ class _MainScreenState extends State<MainScreen> {
             const SizedBox(height: 8),
             Text(
               label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: AppTheme.getBodyStyle(_currentTheme).copyWith(
                 color: _currentTheme.onBackground,
                 fontWeight: FontWeight.w500,
