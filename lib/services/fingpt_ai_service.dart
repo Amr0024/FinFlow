@@ -37,7 +37,6 @@ class FinGPTApiService {
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return body['recommendations'] as List<dynamic>;
   }
-
-  Future<Future<String?>> _getIdToken() async =>
+  Future<String?> _getIdToken() async =>
       FirebaseAuth.instance.currentUser!.getIdToken();
 }

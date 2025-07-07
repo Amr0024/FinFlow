@@ -16,8 +16,8 @@ services:
       firebase emulators:start
       --project finflow-local
       --only auth,firestore,database,ui
-      --import=./seed-data    
-      --export-on-exit=./seed-data
+      --import=./firebase-data
+      --export-on-exit=./firebase-data
     ports:
       - "9099:9099"    # Auth emulator
       - "8080:8080"    # Firestore emulator
@@ -31,10 +31,10 @@ services:
     build:
       context: ./Projects/fingpt_service
       args:
-        FIRESTORE_EMULATOR_HOST: firestore-emulators:8080
+        FIRESTORE_EMULATOR_HOST: emulators:8080
     runtime: nvidia              # <-- enable GPU in Docker Desktop
     environment:
-      - FIRESTORE_EMULATOR_HOST=firestore-emulators:8080
+      - FIRESTORE_EMULATOR_HOST=emulators:8080
       # optional PyTorch VRAM tune-ups
       - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
     ports:
@@ -50,9 +50,9 @@ services:
     build:
       context: ./Projects/fin_etl
       args:
-        FIRESTORE_EMULATOR_HOST: firestore-emulator:8080
+        FIRESTORE_EMULATOR_HOST: emulators:8080
     environment:
-      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
+      - FIRESTORE_EMULATOR_HOST=emulators:8080
     depends_on: [emulators]
     networks: [finnet]
     # Run once then exit; leave it commented if you’ll trigger via cron

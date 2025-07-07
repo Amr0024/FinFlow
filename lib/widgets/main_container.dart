@@ -118,8 +118,8 @@ class _MainContainerState extends State<MainContainer> with TickerProviderStateM
 
           // Recommendations Screen
           RecommendationsScreen(
-            categories: _categories,
             themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
         ],
       ),

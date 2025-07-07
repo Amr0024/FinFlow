@@ -45,7 +45,6 @@ double _safePct(double part, double total) {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  late int _themeIndex;
   Timer? _midnightTimer;
 
   final ScrollController _scrollController = ScrollController();
@@ -73,7 +72,7 @@ class _MainScreenState extends State<MainScreen> {
   String _selectedFilter = 'All';
 
   // Theme management
-  int _selectedThemeIndex = 0; // Default to original theme
+  int _selectedThemeIndex = 0; // Default theme, will sync with widget.themeIndex
   bool _goalsBannerVisible = true;
 
   // Chart management
@@ -89,6 +88,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedThemeIndex = widget.themeIndex;
     _scrollController.addListener(_onScroll);
     _initDaysLeft();
     _scheduleMidnightTick();
@@ -168,6 +168,16 @@ class _MainScreenState extends State<MainScreen> {
             };
           }).toList();
         });
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MainScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.themeIndex != oldWidget.themeIndex) {
+      setState(() {
+        _selectedThemeIndex = widget.themeIndex;
       });
     }
   }
@@ -313,6 +323,7 @@ class _MainScreenState extends State<MainScreen> {
                 setState(() {
                   _selectedThemeIndex = index;
                 });
+                widget.onThemeUpdated?.call(index);
                 Navigator.pop(context);
               },
             );
@@ -790,6 +801,7 @@ class _MainScreenState extends State<MainScreen> {
                                             currentThemeIndex: _selectedThemeIndex,
                                             onThemeChanged: (i) {
                                               setState(() => _selectedThemeIndex = i);
+                                              widget.onThemeUpdated?.call(i);
                                             },
                                           ),
                                         ),
