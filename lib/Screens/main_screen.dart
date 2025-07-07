@@ -16,6 +16,9 @@ import 'notifications_page.dart';
 import 'settings_page.dart';
 import 'package:collection/collection.dart';
 
+import 'charts_screen.dart';
+import '../widgets/category_pie_chart.dart';
+import '../widgets/last_month_category_bar_chart.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
@@ -968,6 +971,7 @@ class _MainScreenState extends State<MainScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Container(
+                        height: 455, // Increased height by 35 pixels to fit all charts
                         decoration: BoxDecoration(
                           color: _currentTheme.brightness == Brightness.dark
                               ? const Color(0xFF23272F)
@@ -984,18 +988,86 @@ class _MainScreenState extends State<MainScreen> {
                           ],
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-                        child: _buildMainChart(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Chart title
+                            Text(
+                              _selectedChartType == improved.ChartType.line
+                                  ? 'Savings Trend'
+                                  : _selectedChartType == improved.ChartType.pie
+                                      ? 'Category Breakdown'
+                                      : _selectedChartType == improved.ChartType.bar
+                                          ? 'Last month category expanses'
+                                          : 'Priority vs Non-Priority',
+                              style: AppTheme.getHeadingStyle(_currentTheme).copyWith(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: _currentTheme.onBackground,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            // Chart switching logic
+                            Expanded(
+                              child: _selectedChartType == improved.ChartType.line
+                                  ? FutureBuilder<List<Map<String, dynamic>>>(
+                                      future: FirestoreService.getSavingsChartData(),
+                                      builder: (context, snapshot) {
+                                        List<double> savingsData = [400, 1800, 800, 1600, 1000, 2000];
+                                        List<String> monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                                          final data = snapshot.data!;
+                                          savingsData = data.map((e) => (e['amount'] as num).toDouble()).toList();
+                                          monthLabels = data.map((e) {
+                                            final parts = (e['month'] as String).split('-');
+                                            final monthNum = int.parse(parts[1]);
+                                            return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][monthNum-1];
+                                          }).toList();
+                                        }
+                                        return FinFlowLineChart(
+                                          savingsData: savingsData,
+                                          monthLabels: monthLabels,
+                                          theme: _currentTheme,
+                                        );
+                                      },
+                                    )
+                                  : _selectedChartType == improved.ChartType.pie
+                                      ? CategoryPieChart(
+                                          categories: _categories,
+                                          theme: _currentTheme,
+                                          size: 220,
+                                        )
+                                      : _selectedChartType == improved.ChartType.bar
+                                          ? LastMonthCategoryBarChart(
+                                              categories: _categories,
+                                              theme: _currentTheme,
+                                              height: 260,
+                                            )
+                                          : Container(
+                                              height: 220,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                'Coming soon...',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: _currentTheme.onBackground.withOpacity(0.5),
+                                                ),
+                                              ),
+                                            ),
+                            ),
+                            SizedBox(height: 18),
+                            Center(
+                              child: improved.ChartTypeSelector(
+                                selectedType: _selectedChartType,
+                                onTypeChanged: (type) => setState(() => _selectedChartType = type),
+                                theme: _currentTheme,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Center(
-                      child: improved.ChartTypeSelector(
-                        selectedType: _selectedChartType,
-                        onTypeChanged: (type) => setState(() => _selectedChartType = type),
-                        theme: _currentTheme,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
 
                     // Expense Categories
                     Padding(
@@ -1089,6 +1161,144 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
+            // Banner (top layer, always interactive when visible)
+            IgnorePointer(
+              ignoring: _bannerOpacity == 0.0,
+              child: Opacity(
+                opacity: _bannerOpacity,
+                child: Transform.translate(
+                  offset: Offset(0, -_bannerOffset),
+                  child: Container(
+                    height: _goalsBannerVisible ? 256 : 140,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.getPrimaryGradient(_currentTheme),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // greeting + icons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _username.isNotEmpty
+                                    ? 'Hi, $_username!'
+                                    : (_firstName.isNotEmpty || _lastName.isNotEmpty)
+                                        ? 'Hi, $_firstName!'
+                                    : 'Hi!',
+                                style: AppTheme.getHeadingStyle(_currentTheme).copyWith(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.notifications, color: Colors.white),
+                                    onPressed: () {
+              Navigator.push(
+                context,
+                                        MaterialPageRoute(builder: (_) => NotificationsPage(themeIndex: _selectedThemeIndex)),
+                    );
+                  },
+                ),
+                                  IconButton(
+                                    icon: Icon(Icons.settings, color: Colors.white),
+                                    onPressed: () {
+              Navigator.push(
+                context,
+                                        MaterialPageRoute(
+                                          builder: (_) => SettingsPage(
+                                            currentThemeIndex: _selectedThemeIndex,
+                                            onThemeChanged: (i) {
+                                              setState(() => _selectedThemeIndex = i);
+                                              widget.onThemeUpdated?.call(i);
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          // Retractable goals section
+                          if (_goalsBannerVisible) ...[
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Financial Goals',
+                                  style: AppTheme.getHeadingStyle(_currentTheme).copyWith(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.keyboard_arrow_up, color: Colors.white),
+                                  onPressed: () => setState(() => _goalsBannerVisible = false),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            FutureBuilder<List<Map<String, dynamic>>>(
+                              future: FirestoreService.getFinancialGoals(),
+                              builder: (context, goalsSnap) {
+                                if (!goalsSnap.hasData || goalsSnap.data!.isEmpty) {
+                                  return Text('No goals set', style: TextStyle(color: Colors.white));
+                                }
+                                return FutureBuilder<List<Map<String, dynamic>>>(
+                                  future: FirestoreService.getSavingsChartData(),
+                                  builder: (context, savingsSnap) {
+                                    double latestSavings = 0;
+                                    if (savingsSnap.hasData && savingsSnap.data!.isNotEmpty) {
+                                      // Use the latest month
+                                      latestSavings = (savingsSnap.data!.last['amount'] as num).toDouble();
+                                    }
+                                    return Column(
+                                      children: goalsSnap.data!.take(2).map((goal) {
+                                        final target = (goal['target'] as num?)?.toDouble() ?? 1;
+                                        final progress = (target > 0) ? (latestSavings / target * 100).clamp(0, 100) : 0.0;
+                                        return _buildGoalProgress(goal['name'] ?? '', progress.toDouble());
+                                      }).toList(),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Financial Goals',
+                                  style: AppTheme.getHeadingStyle(_currentTheme).copyWith(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                                  onPressed: () => setState(() => _goalsBannerVisible = true),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        // Bottom navigation handled by NavigationWrapper
       ),
     );
   }
@@ -1201,7 +1411,9 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
         title: Text(
-          isUnknown ? 'Transaction made' : (isNotPriority && productName != null ? productName : category),
+          isNotPriority && productName != null
+              ? productName
+              : (isUnknown ? 'Transaction made' : category),
           style: AppTheme.getBodyStyle(_currentTheme).copyWith(
             color: _currentTheme.onBackground,
             fontWeight: FontWeight.w500,
@@ -1514,6 +1726,7 @@ class _MainScreenState extends State<MainScreen> {
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 6),
@@ -1587,57 +1800,44 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildMainChart() {
-    switch (_selectedChartType) {
-      case improved.ChartType.line:
-        return Center(
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: FirestoreService.getSavingsChartData(),
-            builder: (context, snapshot) {
-              List<double> savingsData = [400, 1800, 800, 1600, 1000, 2000];
-              List<String> monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-              if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                final data = snapshot.data!;
-                savingsData = data.map((e) => (e['amount'] as num).toDouble()).toList();
-                monthLabels = data.map((e) {
-                  final parts = (e['month'] as String).split('-');
-                  final monthNum = int.parse(parts[1]);
-                  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][monthNum-1];
-                }).toList();
-              }
-              return FinFlowLineChart(
-                savingsData: savingsData,
-                monthLabels: monthLabels,
-            theme: _currentTheme,
-              );
-            },
+  // Helper to build value with small currency
+  Widget _buildValueWithCurrency(String value, Color numberColor) {
+    final match = RegExp(r'([\d,\.]+)\s*LE').firstMatch(value);
+    if (match != null) {
+      final number = match.group(1) ?? value;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            number,
+            style: TextStyle(
+              color: numberColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
           ),
-        );
-      case improved.ChartType.pie:
-        return Center(
-          child: improved.InteractivePieChart(
-            data: improved.ChartDataFactory.pieFromCategories(monthlyReportData, _currentTheme),
-            theme: _currentTheme,
-            size: 220,
+          SizedBox(width: 2),
+          Text(
+            ' LE',
+            style: TextStyle(
+              color: numberColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
           ),
-        );
-      case improved.ChartType.bar:
-        return Center(
-          child: improved.AnimatedBarChart(
-            data: improved.ChartDataFactory.barFromNonPriority(monthlyReportData, _currentTheme),
-            theme: _currentTheme,
-            height: 220,
-          ),
-        );
-      default:
-        // Fallback to new line chart if type is not handled
-        return Center(
-          child: FinFlowLineChart(
-            savingsData: [400, 1800, 800, 1600, 1000, 2000],
-            monthLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            theme: _currentTheme,
-          ),
-        );
+        ],
+      );
+    } else {
+      return Text(
+        value,
+        style: TextStyle(
+          color: numberColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 24,
+        ),
+      );
     }
   }
 }

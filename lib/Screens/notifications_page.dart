@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
+  final int themeIndex;
+  
+  const NotificationsPage({
+    super.key,
+    this.themeIndex = 0,
+  });
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
   final List<Map<String, String>> notifications = const [
     {
       'title': 'Budget Alert',
@@ -18,7 +31,7 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = AppTheme.themes[widget.themeIndex];
     return Scaffold(
       appBar: AppBar(
         title: Row(

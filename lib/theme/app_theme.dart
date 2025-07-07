@@ -257,14 +257,19 @@ class AppTheme {
 
   // Chart Colors for different themes
   static List<Color> getChartColors(ColorScheme theme) {
+    if (theme == originalTheme) {
+      // Modern harmonious palette for default theme
+      return [
+        Color(0xFF5B86E5), // Blue
+        Color(0xFF8F6ED5), // Purple
+        Color(0xFF4DD0E1), // Teal
+        Color(0xFF64B5F6), // Light Blue
+        Color(0xFFBA68C8), // Lavender
+        Color(0xFF81C784), // Green
+        Color(0xFFFFB74D), // Orange
+      ];
+    }
     switch (theme) {
-      case originalTheme:
-        return [
-          const Color(0xFF6A1B9A), // Purple
-          const Color(0xFF8E24AA), // Purple
-          const Color(0xFF9C27B0), // Purple
-          const Color(0xFFAB47BC), // Purple
-        ];
       case darkTheme:
         return [
           const Color(0xFF6A1B9A), // Dark Purple
