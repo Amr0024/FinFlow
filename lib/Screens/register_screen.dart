@@ -100,8 +100,12 @@ class RegisterScreen extends StatelessWidget {
           .doc(uid)
           .collection('balance')
           .doc('current')
-          .set({'total': 0.0, 'monthlyBudget': 0.0});
-
+          .set({
+        'total' : 0.0,
+        'monthlyBudgetLeft'   : 0.0,
+        'monthlyBudgetTarget' : 0.0,
+        'spent' : 0.0,
+      });
       // (optional) ---------- 4)  add a few starter categories ----------
       await FirestoreService.addCategory(
         name : 'Groceries',
@@ -117,6 +121,11 @@ class RegisterScreen extends StatelessWidget {
         name : 'Entertainment',
         color: Colors.purple.value,
         icon : Icons.movie.codePoint,
+      );
+      await FirestoreService.addCategory(
+        name : 'Food',
+        color: Colors.orange.value,
+        icon : Icons.emoji_food_beverage.codePoint,
       );
 
       // ---------- 5)  go to Survey  ----------
