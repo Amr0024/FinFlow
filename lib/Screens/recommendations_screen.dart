@@ -5,10 +5,13 @@ class RecommendationsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
   final int themeIndex;
 
+  final void Function(int)? onThemeUpdated;
+
   const RecommendationsScreen({
     super.key,
     required this.categories,
     this.themeIndex = 0,
+    this.onThemeUpdated,
   });
 
   @override

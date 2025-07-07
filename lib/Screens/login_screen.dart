@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart'; // <-- For Google
-//import 'package:flutter_facebook_auth/flutter_facebook_auth.dart'; // <-- For Facebook
 
 import '../widgets/navigation_wrapper.dart';
 
@@ -91,7 +90,8 @@ class LoginScreen extends StatelessWidget {
 
   // ------------------------------------------------------
   // 2) Google Sign-In
-  // ------------------------------------------------------
+  // -----------------------------------------------------
+/*
   Future<void> _signInWithGoogle(BuildContext context) async {
     try {
       final googleUser = await GoogleSignIn().signIn();
@@ -161,7 +161,7 @@ class LoginScreen extends StatelessWidget {
       );
     }
   }
-
+*/
   // ------------------------------------------------------
   // 3) Facebook Sign-In
   // ------------------------------------------------------
@@ -426,7 +426,7 @@ class LoginScreen extends StatelessWidget {
                           // Google
                           IconButton(
                             icon: const Icon(Icons.g_mobiledata, size: 70, color: Colors.white),
-                            onPressed: () => _signInWithGoogle(context),
+                            onPressed: () {},//=> _signInWithGoogle(context),
                             style: ButtonStyle(
                               overlayColor: MaterialStateProperty.resolveWith<Color?>((states){
                                 if(states.contains(MaterialState.pressed)){

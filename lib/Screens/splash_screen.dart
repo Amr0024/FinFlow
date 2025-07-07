@@ -15,7 +15,6 @@ class _SplashScreenState extends State<SplashScreen> {
   final List<String> tips = [
     "Stay on top of your finances with FinFlow.",
     "Set budgets and achieve your financial goals.",
-    "Visualize your spending with easy-to-read charts.",
   ];
 
   int currentTipIndex = 0;
@@ -26,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     // Start a timer to cycle through tips every 2 seconds
-    _tipTimer = Timer.periodic(Duration(seconds: 2), (timer) {
+    _tipTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
           currentTipIndex = (currentTipIndex + 1) % tips.length;
