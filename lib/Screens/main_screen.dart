@@ -15,6 +15,8 @@ import 'financial_goals_screen.dart';
 import 'notifications_page.dart';
 import 'settings_page.dart';
 import 'charts_screen.dart';
+import '../widgets/category_pie_chart.dart';
+import '../widgets/last_month_category_bar_chart.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
@@ -969,6 +971,7 @@ class _MainScreenState extends State<MainScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Container(
+                        height: 455, // Increased height by 35 pixels to fit all charts
                         decoration: BoxDecoration(
                           color: _currentTheme.brightness == Brightness.dark
                               ? const Color(0xFF23272F)
@@ -985,18 +988,86 @@ class _MainScreenState extends State<MainScreen> {
                           ],
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-                        child: _buildMainChart(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Chart title
+                            Text(
+                              _selectedChartType == improved.ChartType.line
+                                  ? 'Savings Trend'
+                                  : _selectedChartType == improved.ChartType.pie
+                                      ? 'Category Breakdown'
+                                      : _selectedChartType == improved.ChartType.bar
+                                          ? 'Last month category expanses'
+                                          : 'Priority vs Non-Priority',
+                              style: AppTheme.getHeadingStyle(_currentTheme).copyWith(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: _currentTheme.onBackground,
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            // Chart switching logic
+                            Expanded(
+                              child: _selectedChartType == improved.ChartType.line
+                                  ? FutureBuilder<List<Map<String, dynamic>>>(
+                                      future: FirestoreService.getSavingsChartData(),
+                                      builder: (context, snapshot) {
+                                        List<double> savingsData = [400, 1800, 800, 1600, 1000, 2000];
+                                        List<String> monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                                          final data = snapshot.data!;
+                                          savingsData = data.map((e) => (e['amount'] as num).toDouble()).toList();
+                                          monthLabels = data.map((e) {
+                                            final parts = (e['month'] as String).split('-');
+                                            final monthNum = int.parse(parts[1]);
+                                            return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][monthNum-1];
+                                          }).toList();
+                                        }
+                                        return FinFlowLineChart(
+                                          savingsData: savingsData,
+                                          monthLabels: monthLabels,
+                                          theme: _currentTheme,
+                                        );
+                                      },
+                                    )
+                                  : _selectedChartType == improved.ChartType.pie
+                                      ? CategoryPieChart(
+                                          categories: _categories,
+                                          theme: _currentTheme,
+                                          size: 220,
+                                        )
+                                      : _selectedChartType == improved.ChartType.bar
+                                          ? LastMonthCategoryBarChart(
+                                              categories: _categories,
+                                              theme: _currentTheme,
+                                              height: 260,
+                                            )
+                                          : Container(
+                                              height: 220,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                'Coming soon...',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: _currentTheme.onBackground.withOpacity(0.5),
+                                                ),
+                                              ),
+                                            ),
+                            ),
+                            SizedBox(height: 18),
+                            Center(
+                              child: improved.ChartTypeSelector(
+                                selectedType: _selectedChartType,
+                                onTypeChanged: (type) => setState(() => _selectedChartType = type),
+                                theme: _currentTheme,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Center(
-                      child: improved.ChartTypeSelector(
-                        selectedType: _selectedChartType,
-                        onTypeChanged: (type) => setState(() => _selectedChartType = type),
-                        theme: _currentTheme,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
 
                     // Expense Categories
                     Padding(
@@ -1685,60 +1756,6 @@ class _MainScreenState extends State<MainScreen> {
           fontSize: 24,
         ),
       );
-    }
-  }
-
-  Widget _buildMainChart() {
-    switch (_selectedChartType) {
-      case improved.ChartType.line:
-        return Center(
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: FirestoreService.getSavingsChartData(),
-            builder: (context, snapshot) {
-              List<double> savingsData = [400, 1800, 800, 1600, 1000, 2000];
-              List<String> monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-              if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                final data = snapshot.data!;
-                savingsData = data.map((e) => (e['amount'] as num).toDouble()).toList();
-                monthLabels = data.map((e) {
-                  final parts = (e['month'] as String).split('-');
-                  final monthNum = int.parse(parts[1]);
-                  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][monthNum-1];
-                }).toList();
-              }
-              return FinFlowLineChart(
-                savingsData: savingsData,
-                monthLabels: monthLabels,
-            theme: _currentTheme,
-              );
-            },
-          ),
-        );
-      case improved.ChartType.pie:
-        return Center(
-          child: improved.InteractivePieChart(
-            data: improved.ChartDataFactory.pieFromCategories(monthlyReportData, _currentTheme),
-            theme: _currentTheme,
-            size: 220,
-          ),
-        );
-      case improved.ChartType.bar:
-        return Center(
-          child: improved.AnimatedBarChart(
-            data: improved.ChartDataFactory.barFromNonPriority(monthlyReportData, _currentTheme),
-            theme: _currentTheme,
-            height: 220,
-          ),
-        );
-      default:
-        // Fallback to new line chart if type is not handled
-        return Center(
-          child: FinFlowLineChart(
-            savingsData: [400, 1800, 800, 1600, 1000, 2000],
-            monthLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            theme: _currentTheme,
-          ),
-        );
     }
   }
 }
