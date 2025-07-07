@@ -104,6 +104,7 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
           RecommendationsScreen(
             categories: _categories,
             themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
         ],
       ),
