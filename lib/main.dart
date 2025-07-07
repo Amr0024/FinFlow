@@ -20,10 +20,9 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await NotificationService.init();
-  await NotificationService.scheduleDailyExpenseReminder();
-
 _connectToLocalEmulators();   // ← only when debugging
+await NotificationService.init();
+await NotificationService.scheduleDailyExpenseReminder();
 
   runApp(const MyApp());
 }
