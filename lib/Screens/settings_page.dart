@@ -1,7 +1,11 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
+import 'account_details_page.dart';
+import 'login_screen.dart';
+
+
 
 class SettingsPage extends StatefulWidget {
   final int currentThemeIndex;
@@ -132,7 +136,14 @@ class _SettingsPageState extends State<SettingsPage> {
                                 leading: Icon(Icons.account_circle, color: colorScheme.primary),
                                 title: Text('Account Details', style: TextStyle(color: colorScheme.onSurface, fontSize: 16)),
                                 trailing: Icon(Icons.arrow_forward_ios, size: 18, color: colorScheme.onSurface.withOpacity(0.5)),
-                                onTap: () {},
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AccountDetailsPage(),
+                                    ),
+                                  );
+                                },
                               ),
                               ListTile(
                                 leading: Icon(Icons.privacy_tip, color: colorScheme.primary),
@@ -165,7 +176,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       icon: Icon(Icons.logout),
                       label: Text('Log Out'),
-                      onPressed: () {},
+                      onPressed: () async {
+                        await FirebaseAuth.instance.signOut();
+                        if (!mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => LoginScreen()),
+                        (route) => false,
+                        );
+                      },
                     ),
                   ),
                 ],
