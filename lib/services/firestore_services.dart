@@ -86,9 +86,8 @@ class FirestoreService {
 
     // some default categories
     const defaults = [
-      {'name': 'Food', 'icon': 0xe57a, 'color': 0xFFe91e63},
-      {'name': 'Entertainment', 'icon': 0xe8a3, 'color': 0xFF9c27b0},
-      {'name': 'Fashion', 'icon': 0xe41d, 'color': 0xFF2196f3},
+      {'name': 'Food', 'icon': Icons.fastfood, 'color': 0xFFe91e63},
+      {'name': 'Fashion', 'icon': Icons.shopping_bag, 'color': 0xFF2196f3},
     ];
     for (final cat in defaults) {
       final doc = userDoc.collection('categories').doc();

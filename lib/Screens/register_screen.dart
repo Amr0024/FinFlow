@@ -125,7 +125,7 @@ class RegisterScreen extends StatelessWidget {
       await FirestoreService.addCategory(
         name : 'Food',
         color: Colors.orange.value,
-        icon : Icons.emoji_food_beverage.codePoint,
+        icon : Icons.fastfood.codePoint,
       );
 
       // ---------- 5)  go to Survey  ----------

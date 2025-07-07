@@ -64,9 +64,10 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
 
   Widget _buildHeader() {
     final colorScheme = AppTheme.themes[widget.themeIndex];
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(24, 24 + topPadding, 24, 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -797,11 +798,13 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.grey.shade50,
-    body: Stack(
-      children: [
-        SingleChildScrollView(
-      child: Column(
+    body: SafeArea(
+      bottom: false,
+      child: Stack(
         children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
               _buildHeader(),
               const SizedBox(height: 20),
               _buildAmountField(),
@@ -817,6 +820,7 @@ class _ExpansesScreenState extends State<ExpansesScreen> {
         ),
         _buildCategoryModal(),
       ],
+    ),
     ),
   );
 
