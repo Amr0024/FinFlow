@@ -82,13 +82,17 @@ class RegisterScreen extends StatelessWidget {
       final uid = cred.user!.uid;
 
       // ---------- 2)  base profile doc ----------
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'firstName' : firstName,
-        'lastName'  : lastName,
-        'username'  : userName,
-        'email'     : email,
-        'createdAt' : FieldValue.serverTimestamp(),
-      });
+      try{
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'firstName' : firstName,
+          'lastName'  : lastName,
+          'username'  : userName,
+          'email'     : email,
+          'createdAt' : FieldValue.serverTimestamp(),
+        }); debugPrint('✅ Firestore write succeeded');
+      } catch (e, stack) {
+        debugPrint('Firestore write failed $e\n$stack');
+      }
 
       // ---------- 3)  initialise balance ----------
       await FirebaseFirestore.instance

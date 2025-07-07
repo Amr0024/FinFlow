@@ -85,6 +85,9 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
           MainScreen(
             selectedGoals: widget.selectedGoals,
             surveyResults: widget.surveyResults,
+            onCategoriesUpdated: _updateCategories,
+            onThemeUpdated: _updateTheme,
+            themeIndex: _selectedThemeIndex,
           ),
 
           // Notes Screen
@@ -101,7 +104,6 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
           RecommendationsScreen(
             categories: _categories,
             themeIndex: _selectedThemeIndex,
-            onThemeUpdated: _updateTheme,
           ),
         ],
       ),

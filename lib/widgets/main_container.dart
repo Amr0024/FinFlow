@@ -24,7 +24,7 @@ class _MainContainerState extends State<MainContainer> with TickerProviderStateM
   int _currentIndex = 0;
   int _selectedThemeIndex = 0;
   List<Map<String, dynamic>> _categories = [];
-  
+
   late PageController _pageController;
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -55,7 +55,7 @@ class _MainContainerState extends State<MainContainer> with TickerProviderStateM
       setState(() {
         _currentIndex = index;
       });
-      
+
       // Animate to the new page
       _pageController.animateToPage(
         index,
@@ -80,7 +80,7 @@ class _MainContainerState extends State<MainContainer> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final currentTheme = AppTheme.themes[_selectedThemeIndex];
-    
+
     return Scaffold(
       backgroundColor: currentTheme.brightness == Brightness.dark
           ? Color(0xFF1A202C)
@@ -101,26 +101,25 @@ class _MainContainerState extends State<MainContainer> with TickerProviderStateM
             onThemeUpdated: _updateTheme,
             themeIndex: _selectedThemeIndex,
           ),
-          
+
           // Notes Screen
           NotesScreen(
             categories: _categories,
             themeIndex: _selectedThemeIndex,
             onThemeUpdated: _updateTheme,
           ),
-          
+
           // Goals Screen
           FinancialGoalsScreen(
             colorScheme: currentTheme,
             themeIndex: _selectedThemeIndex,
             onThemeUpdated: _updateTheme,
           ),
-          
+
           // Recommendations Screen
           RecommendationsScreen(
             categories: _categories,
             themeIndex: _selectedThemeIndex,
-            onThemeUpdated: _updateTheme,
           ),
         ],
       ),

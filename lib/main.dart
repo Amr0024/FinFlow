@@ -35,7 +35,7 @@ void _connectToLocalEmulators() {
   // Android emulators need 10.0.2.2 to reach the host; everything else can use localhost.
   final host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
 
-  FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
+  FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
   FirebaseFirestore.instance.settings = const Settings(
     sslEnabled: false,
     persistenceEnabled: false,
@@ -43,6 +43,8 @@ void _connectToLocalEmulators() {
 
   FirebaseAuth.instance.useAuthEmulator(host, 9099);
   FirebaseDatabase.instance.useDatabaseEmulator(host, rtdbPort);
+  debugPrint('→ connecting Firestore to $host:8080');
+
 
   debugPrint('🔌  Connected to local Firebase emulators at $host');
 }
@@ -65,9 +67,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/':       (context) => const SplashScreen(),
         '/survey': (context) => const SurveyScreen(),
-        '/ai-recos': (context) => RecommendationsScreen(categories: [], themeIndex: 0, onThemeUpdated: (newIndex) {
-          debugPrint('Theme change requested: $newIndex');
-        }),
+        '/ai-recos': (context) => RecommendationsScreen(categories: [], themeIndex: 0,
+        ),
       },
     );
   }
