@@ -904,7 +904,7 @@ class _MainScreenState extends State<MainScreen> {
                       children: [
                           _buildWideBudgetCard(
                             leftTitle: 'Monthly Budget',
-                            leftValue: '${_monthlyBudgetTarget.toStringAsFixed(0)} LE',
+                            leftValue: '${_totalBalance.toStringAsFixed(0)} LE',
                             leftIcon: Icons.account_balance_wallet,
                             leftAccent: _currentTheme.primary,
                             rightTitle: 'Days Left',
@@ -918,11 +918,11 @@ class _MainScreenState extends State<MainScreen> {
                             leftValue: '${_monthlyBudgetLeft.toStringAsFixed(0)} LE',
                             leftIcon: Icons.savings,
                             leftAccent: _currentTheme.secondary,
-                            leftPercentage : '${_safePct(_monthlyBudgetLeft, _monthlyBudgetTarget).toStringAsFixed(0)}%',
+                            leftPercentage : '${_safePct(_monthlyBudgetLeft, _totalBalance).toStringAsFixed(0)}%',
                             rightTitle: 'Spending',
                             rightValue: '${_spent.toStringAsFixed(0)} LE',
                             rightAccent: _currentTheme.tertiary,
-                            rightPercentage: '${_safePct(_spent, _monthlyBudgetTarget).toStringAsFixed(0)}%',
+                            rightPercentage: '${_safePct(_spent, _totalBalance).toStringAsFixed(0)}%',
                             showRightIcon: false,
                             percentInline: true,
                           ),

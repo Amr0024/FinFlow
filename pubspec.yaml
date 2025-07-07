@@ -76,6 +76,7 @@ flutter:
     - assets/images/finflowff.png
     - assets/images/finflow_blue.png
     - assets/images/finflow_white.png
+    - assets/images/survey_icon.png
   fonts:
     - family: Helvetica
       fonts:
