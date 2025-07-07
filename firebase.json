@@ -1,1 +1,43 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fin-flow-26m8k6","appId":"1:156960955122:android:4f9528e59c645baff00e6b","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fin-flow-26m8k6","configurations":{"android":"1:156960955122:android:4f9528e59c645baff00e6b","ios":"1:156960955122:ios:db6ccd073b525df1f00e6b","windows":"1:156960955122:web:9d400874c4e7915cf00e6b"}}}}}}
+{
+  "flutter":{
+    "platforms": {
+      "android":{
+        "default":{
+          "projectId":"fin-flow-26m8k6","appId":"1:156960955122:android:4f9528e59c645baff00e6b","fileOutput":"android/app/google-services.json"}},
+          "dart":{
+            "lib/firebase_options.dart":{
+              "projectId":"fin-flow-26m8k6","configurations":{
+                "android":"1:156960955122:android:4f9528e59c645baff00e6b","ios":"1:156960955122:ios:db6ccd073b525df1f00e6b","windows":"1:156960955122:web:9d400874c4e7915cf00e6b"
+                }
+                }
+                }
+                }
+              },
+              
+  "emulators": {
+
+    "auth": { 
+      "host": "0.0.0.0",
+      "port": 9099 
+    },
+
+    "firestore": { 
+      "port": 8080,
+      "host": "0.0.0.0"
+   },
+
+    "database":{
+      "host": "0.0.0.0",
+      "port": 9000
+    },
+    "ui": { 
+      "enabled": true,
+      "host": "0.0.0.0",
+      "port": 4000
+  }
+  },
+
+    "import": "./firebase-data",
+    "exportOnExit": "./firebase-data",
+    "singleProjectMode": true
+}
