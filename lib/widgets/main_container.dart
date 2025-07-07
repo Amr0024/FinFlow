@@ -128,6 +128,7 @@ class _MainContainerState extends State<MainContainer> with TickerProviderStateM
         currentIndex: _currentIndex,
         theme: currentTheme,
         onTabChanged: _onTabChanged,
+        categories: _categories,
       ),
     );
   }

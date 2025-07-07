@@ -18,12 +18,19 @@ import 'package:collection/collection.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
-  final Map<String, dynamic> surveyResults; // Survey results
+  final Map<String, dynamic> surveyResults;
+
+  final void Function(List<Map<String, dynamic>> cats)? onCategoriesUpdated;
+  final void Function(int themeIdx)? onThemeUpdated;
+  final int themeIndex;
 
   const MainScreen({
     super.key,
     required this.selectedGoals,
     required this.surveyResults,
+    this.onCategoriesUpdated,
+    this.onThemeUpdated,
+    this.themeIndex = 0,
   });
 
 
@@ -38,6 +45,7 @@ double _safePct(double part, double total) {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  late int _themeIndex;
   Timer? _midnightTimer;
 
   final ScrollController _scrollController = ScrollController();
