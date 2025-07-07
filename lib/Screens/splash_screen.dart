@@ -14,7 +14,6 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   final List<String> tips = [
     "Stay on top of your finances with FinFlow.",
-    "Set budgets and achieve your financial goals.",
   ];
 
   int currentTipIndex = 0;
@@ -25,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     // Start a timer to cycle through tips every 2 seconds
-    _tipTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _tipTimer = Timer.periodic(Duration(seconds: 2), (timer) {
       if (mounted) {
         setState(() {
           currentTipIndex = (currentTipIndex + 1) % tips.length;
@@ -34,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
     });
 
     // Navigate to the login screen after 10 seconds
-    Future.delayed(Duration(seconds: 10), () {
+    Future.delayed(Duration(seconds: 4), () {
       if (mounted) {
         _tipTimer.cancel(); // Stop the timer
         Navigator.pushReplacement(
@@ -76,7 +75,12 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                FlutterLogo(size: 100), // Replace with your app logo
+                Image.asset(
+                  'assets/images/finflow_white.png',
+                  width: 300,
+                  height: 300,
+                  fit: BoxFit.contain,    // or fill, cover, etc. as desired
+                ),
                 SizedBox(height: 20),
                 Text(
                   'FinFlow', // App name

@@ -156,20 +156,8 @@ class RegisterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Top bar
-      backgroundColor: Colors.teal,
-      appBar: AppBar(
-          title: Text('Sign Up',
-            style: TextStyle(
-              fontFamily: 'Helvetica-Bold',
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-      ),),
       body: Stack(
         children: [
-          // Gradient background with hollow circles
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

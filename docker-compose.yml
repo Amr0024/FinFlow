@@ -12,12 +12,6 @@ services:
     volumes:
       - ./:/workspace              # mounts firebase.json here
       - ./firebase-data:/workspace/firebase-data
-    command: |
-      firebase emulators:start
-      --project finflow-local
-      --only auth,firestore,database,ui
-      --import=./firebase-data
-      --export-on-exit=./firebase-data
     ports:
       - "9099:9099"    # Auth emulator
       - "8080:8080"    # Firestore emulator

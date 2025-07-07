@@ -235,7 +235,7 @@ class AppTheme {
       fontFamily: 'Helvetica-Bold',
       fontSize: 32,
       fontWeight: FontWeight.bold,
-      color: theme.brightness == Brightness.dark ? Colors.white : Colors.white,
+      color: theme.onBackground,
     );
   }
 
@@ -243,7 +243,7 @@ class AppTheme {
     return TextStyle(
       fontFamily: 'Helvetica',
       fontSize: 18,
-      color: theme.brightness == Brightness.dark ? Colors.white : Colors.white,
+      color: theme.onBackground,
     );
   }
 
@@ -251,7 +251,7 @@ class AppTheme {
     return TextStyle(
       fontFamily: 'Helvetica',
       fontSize: 16,
-      color: theme.brightness == Brightness.dark ? Colors.white : Colors.white,
+      color: theme.onBackground,
     );
   }
 

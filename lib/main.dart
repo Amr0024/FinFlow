@@ -65,7 +65,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/':       (context) => const SplashScreen(),
         '/survey': (context) => const SurveyScreen(),
-        '/ai-recos': (context) => RecommendationsScreen(categories: [], themeIndex: 0, onThemeUpdated: (newIndex) {
+        '/ai-recos': (context) => RecommendationsScreen(themeIndex: 0, onThemeUpdated: (newIndex) {
           debugPrint('Theme change requested: $newIndex');
         }),
       },

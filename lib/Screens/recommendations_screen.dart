@@ -5,7 +5,7 @@ import '../services/forecast_service.dart';
 import '../services/fingpt_ai_service.dart';
 import '../models/recommendation_model.dart';
 
-class RecommendationsScreen extends StatelessWidget {
+class RecommendationsScreen extends StatefulWidget {
   final int themeIndex;
   final ValueChanged<int> onThemeUpdated;
 

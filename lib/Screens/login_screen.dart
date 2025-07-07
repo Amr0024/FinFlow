@@ -245,16 +245,6 @@ class LoginScreen extends StatelessWidget {
     FirebaseAuth.instance.signOut();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Log In',
-          style: TextStyle(
-          fontFamily: 'Helvetica-Bold',
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),),
-        iconTheme: IconThemeData(color: Colors.white),
-        ),
       body: Stack(
         children: [
           // gradient background
