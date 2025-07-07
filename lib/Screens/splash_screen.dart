@@ -1,8 +1,10 @@
-// splash_screen.dart
 import 'package:flutter/material.dart';
-import 'package:projects_flutter/Screens/register_screen.dart';
-import 'dart:async'; // Import for Timer
-import 'login_screen.dart'; // Import the login screen
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_screen.dart';
+import 'survey_screen.dart';
+import '../widgets/navigation_wrapper.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,6 +16,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   final List<String> tips = [
     "Stay on top of your finances with FinFlow.",
+    "Your Financial AI Buddy"
   ];
 
   int currentTipIndex = 0;

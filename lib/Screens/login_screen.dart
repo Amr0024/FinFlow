@@ -241,8 +241,6 @@ class LoginScreen extends StatelessWidget {
 */
   @override
   Widget build(BuildContext context) {
-    // Force sign-out each time the login screen builds
-    FirebaseAuth.instance.signOut();
 
     return Scaffold(
       body: Stack(
