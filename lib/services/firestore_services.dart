@@ -99,6 +99,8 @@ class FirestoreService {
         'budget': 0.0,
       });
     }
+
+    await batch.commit();
   }
 
   static Future<void> setBalance({
