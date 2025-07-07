@@ -2,14 +2,24 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io' show Platform;
+
 
 class FinGPTApiService {
   final String _baseUrl;
 
-  FinGPTApiService({String? baseUrl})
-      : _baseUrl = baseUrl ??
-      const String.fromEnvironment('FINGPT_API_URL',
-          defaultValue: 'http://localhost:8081');
+  FinGPTApiService({String? baseUrl}) : _baseUrl = baseUrl ?? _defaultBaseUrl();
+
+  static String _defaultBaseUrl() {
+    const env = String.fromEnvironment('FINGPT_API_URL');
+    if (env.isNotEmpty) return env;
+    return 'http://${_host()}:8081';
+  }
+
+  static String _host() {
+    if (Platform.isAndroid) return '10.0.2.2';
+    return 'localhost';
+  }
 
   /// GET /
   Future<Map<String, dynamic>> health() async {

@@ -6,22 +6,10 @@ plugins {
     id 'com.google.gms.google-services'
 }
 android {
+    namespace "com.some.name"
     namespace = "com.example.projects_flutter"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-
-'''    plugins {
-        id "com.android.application"
-        id "kotlin-android"
-        // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
-        id "dev.flutter.flutter-gradle-plugin"
-        id 'com.google.gms.google-services'
-    }
-    dependencies {
-        implementation platform('com.google.firebase:firebase-bom:33.11.0')
-
-    }
-'''
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21

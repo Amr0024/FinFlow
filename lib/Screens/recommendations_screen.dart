@@ -34,6 +34,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   }
 
   Future<void> _loadData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
       final recs = await _forecastService.fetchRecommendations(uid);
@@ -44,8 +48,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
         _loading = false;
       });
     } catch (e) {
+      debugPrint('Recommendation load error: $e');
       setState(() {
-        _error = e.toString();
+        _error = 'Failed to load recommendations';
         _loading = false;
       });
     }
@@ -53,59 +58,94 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppTheme.themes[widget.themeIndex];
+    final scheme = AppTheme.themes[widget.themeIndex];
 
-    Widget body;
+    Widget content;
     if (_loading) {
-      body = const Center(child: CircularProgressIndicator());
+      content = const Center(child: CircularProgressIndicator());
     } else if (_error != null) {
-      body = Center(child: Text('Error: \$_error'));
+      content = Center(
+        child: Text('Error: \$_error', style: AppTheme.getBodyStyle(scheme)),
+      );
     } else {
-      body = ListView(
-        padding: const EdgeInsets.all(16),
+      content = ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          ..._recs.map((r) => Card(
-            color: colors.secondaryContainer,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListTile(
-              title: Text(r.title),
-              subtitle: Text(r.description),
-              trailing: Text(
-                r.forecastValue.toStringAsFixed(2),
-                style: TextStyle(color: colors.primary),
+          if (_recs.isNotEmpty) ...[
+            Text('Forecast Recommendations',
+                style: AppTheme.getHeadingStyle(scheme).copyWith(fontSize: 24)),
+            const SizedBox(height: 12),
+            ..._recs.map((r) => Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: AppTheme.getGlassCardDecoration(scheme),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(r.title,
+                      style: AppTheme
+                          .getSubheadingStyle(scheme)
+                          .copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(r.description, style: AppTheme.getBodyStyle(scheme)),
+                  const SizedBox(height: 8),
+                  Text(r.forecastValue.toStringAsFixed(2),
+                      style: AppTheme
+                          .getHeadingStyle(scheme)
+                          .copyWith(fontSize: 20, color: scheme.primary)),
+                ],
               ),
-            ),
-          )),
+            )),
+          ],
           if (_tips.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text('AI Tips', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            ..._tips.map((t) => ListTile(
-              leading: const Icon(Icons.lightbulb_outline),
-              title: Text('$t'),
+            const SizedBox(height: 24),
+            Text('FinGPT Tips',
+                style: AppTheme.getHeadingStyle(scheme).copyWith(fontSize: 24)),
+            const SizedBox(height: 12),
+            ..._tips.map((t) => Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: AppTheme.getGlassCardDecoration(scheme),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline, color: scheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('$t', style: AppTheme.getBodyStyle(scheme)),
+                  ),
+                ],
+              ),
             )),
           ],
         ],
       );
     }
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      appBar: AppBar(
-        title: const Text('Recommendations'),
-        backgroundColor: colors.primary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.palette),
-            onPressed: () {
-              final next =
-                  (widget.themeIndex + 1) % AppTheme.themes.length;
-              widget.onThemeUpdated(next);
-            },
-          ),
-        ],
+    return Container(
+      decoration: BoxDecoration(gradient: AppTheme.getPrimaryGradient(scheme)),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text('AI Recommendations',
+              style: TextStyle(color: scheme.onBackground)),
+          backgroundColor: scheme.background.withOpacity(0.9),
+          iconTheme: IconThemeData(color: scheme.onBackground),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.palette),
+              onPressed: () {
+                final next = (widget.themeIndex + 1) % AppTheme.themes.length;
+                widget.onThemeUpdated(next);
+              },
+            ),
+          ],
+        ),
+        body: RefreshIndicator(
+          onRefresh: _loadData,
+          child: content,
+        ),
       ),
-      body: body,
     );
   }
 }
