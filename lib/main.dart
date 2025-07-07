@@ -1,25 +1,27 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-
 // Firebase core + services
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
-
 // Local imports
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'screens/survey_screen.dart';          // if you still use it
 import 'screens/recommendations_screen.dart'; // make sure class is RecommendationsScreen
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await NotificationService.init();
+  await NotificationService.scheduleDailyExpenseReminder();
 
 _connectToLocalEmulators();   // ← only when debugging
 

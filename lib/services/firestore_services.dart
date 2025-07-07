@@ -89,15 +89,15 @@ class FirestoreService {
     });
 
     // some default categories
-    const defaults = [
+    final defaults = [
       {
         'name': 'Food',
-        'icon': Icons.fastfood,
+        'icon': Icons.fastfood.codePoint,
         'color': 0xFFe91e63
       },
       {
         'name': 'Fashion',
-        'icon': Icons.shopping_bag,
+        'icon': Icons.shopping_bag.codePoint,
         'color': 0xFF2196f3
       },
     ];

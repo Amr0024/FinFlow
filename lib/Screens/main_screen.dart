@@ -16,6 +16,7 @@ import 'notifications_page.dart';
 import 'settings_page.dart';
 import 'package:collection/collection.dart';
 
+
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
   final Map<String, dynamic> surveyResults;
