@@ -1069,54 +1069,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
-
-        // bottom nav with theme support
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: 0,
-          selectedItemColor: _currentTheme.primary,
-          unselectedItemColor: _currentTheme.onBackground.withOpacity(0.5),
-          backgroundColor: _currentTheme.surface,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home),      label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.notes),     label: 'Notes'),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Goals'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings),  label: 'Settings'),
-          ],
-          onTap: (i) {
-            if (i == 1) {
-              Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => NotesScreen(categories: _categories),
-                  transitionsBuilder: (_, animation, __, child) {
-                    return SlideTransition(
-                      position: Tween(begin: const Offset(1, 0), end: Offset.zero)
-                          .chain(CurveTween(curve: Curves.easeInOut))
-                          .animate(animation),
-                      child: child,
-                    );
-                  },
-                ),
-              );
-            } else if (i == 2) {
-              Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => FinancialGoalsScreen(colorScheme: _currentTheme),
-                  transitionsBuilder: (_, animation, __, child) {
-                    return SlideTransition(
-                      position: Tween(begin: const Offset(1, 0), end: Offset.zero)
-                          .chain(CurveTween(curve: Curves.easeInOut))
-                          .animate(animation),
-                      child: child,
-                    );
-                  },
-                ),
-              );
-            }
-          },
-        ),
       ),
     );
   }

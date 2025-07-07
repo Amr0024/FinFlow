@@ -23,7 +23,7 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
   int _currentIndex = 0;
   int _selectedThemeIndex = 0;
   List<Map<String, dynamic>> _categories = [];
-  
+
   late PageController _pageController;
 
   @override
@@ -43,7 +43,7 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
       setState(() {
         _currentIndex = index;
       });
-      
+
       // Animate to the new page
       _pageController.animateToPage(
         index,
@@ -68,7 +68,7 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
   @override
   Widget build(BuildContext context) {
     final currentTheme = AppTheme.themes[_selectedThemeIndex];
-    
+
     return Scaffold(
       backgroundColor: currentTheme.brightness == Brightness.dark
           ? Color(0xFF1A202C)
@@ -86,21 +86,22 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
             selectedGoals: widget.selectedGoals,
             surveyResults: widget.surveyResults,
           ),
-          
+
           // Notes Screen
           NotesScreen(
             categories: _categories,
           ),
-          
+
           // Goals Screen
           FinancialGoalsScreen(
             colorScheme: currentTheme,
           ),
-          
+
           // Recommendations Screen
           RecommendationsScreen(
             categories: _categories,
             themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
         ],
       ),
