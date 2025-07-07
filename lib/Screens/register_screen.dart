@@ -5,15 +5,31 @@ import 'survey_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:projects_flutter/services/firestore_services.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+
   // Controllers for user input
-  static final TextEditingController _firstNameController = TextEditingController();
-  static final TextEditingController _lastNameController = TextEditingController();
-  static final TextEditingController _usernameController = TextEditingController();
-  static final TextEditingController _emailController = TextEditingController();
-  static final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   // -----------------------------------
   // Password complexity check
@@ -76,6 +92,7 @@ class RegisterScreen extends StatelessWidget {
       await FirestoreService.initNewUser(
         firstName: firstName,
         lastName : lastName,
+        userName : userName,
         email    : email,
       );
 
@@ -313,7 +330,7 @@ class RegisterScreen extends StatelessWidget {
   }
 
   // Reusable method to build text fields with the same style
-  static Widget _buildTextField({
+  Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,

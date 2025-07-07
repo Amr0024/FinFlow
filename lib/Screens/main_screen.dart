@@ -840,8 +840,8 @@ class _MainScreenState extends State<MainScreen> {
                             ),
                             const SizedBox(height: 10),
                             FutureBuilder<List<Map<String, dynamic>>>(
-                              future: FirestoreService.getFinancialGoals(),
-                              builder: (context, goalsSnap) {
+                              future: FirestoreService.getOrCreateFinancialGoals(
+                                  widget.selectedGoals),                              builder: (context, goalsSnap) {
                                 if (!goalsSnap.hasData || goalsSnap.data!.isEmpty) {
                                   return Text('No goals set', style: TextStyle(color: Colors.white));
                                 }

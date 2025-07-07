@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
 
-
 class AccountDetailsPage extends StatefulWidget {
 
   const AccountDetailsPage({Key? key}) : super(key: key);
@@ -62,19 +61,23 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           padding: const EdgeInsets.all(20),
           children: [
             ListTile(
-              leading: Icon(Icons.person, color: Colors.white),
-              title: const Text('Name'),
-              subtitle: Text('$_firstName $_lastName'),
+              leading: Icon(Icons.person, color: colorScheme.primary),
+              title: Text('Name', style: TextStyle(color: colorScheme.onSurface)),
+              subtitle: Text('$_firstName $_lastName',
+                  style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
             ),
             ListTile(
-              leading: Icon(Icons.account_circle, color:Colors.white),
-              title: const Text('Username'),
-              subtitle: Text(_username),
+              leading: Icon(Icons.account_circle, color: colorScheme.primary),
+              title: Text('Username',
+                  style: TextStyle(color: colorScheme.onSurface)),
+              subtitle: Text(_username,
+                  style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
             ),
             ListTile(
-              leading: Icon(Icons.email, color: Colors.white),
-              title: const Text('Email'),
-              subtitle: Text(_email),
+              leading: Icon(Icons.email, color: colorScheme.primary),
+              title: Text('Email', style: TextStyle(color: colorScheme.onSurface)),
+              subtitle: Text(_email,
+                  style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7))),
             ),
           ],
         ),

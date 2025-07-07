@@ -52,9 +52,11 @@ class FirestoreService {
   // Helper: rebuild Color / IconData from the primitive ints we store
   static Map<String, dynamic> _catFromDoc(
       DocumentSnapshot<Map<String, dynamic>> d) {
-    final m = d.data()!
-      ..addAll({'id': d.id});
-    m['icon'] = IconData(m['icon'], fontFamily: 'MaterialIcons');
+    final m = d.data()!..addAll({'id': d.id});
+    final rawIcon = m['icon'];
+    m['icon'] = rawIcon is int
+        ? IconData(rawIcon, fontFamily: 'MaterialIcons')
+        : (rawIcon is IconData ? rawIcon : Icons.help_outline);
     m['color'] = Color(m['color']);
     return m;
   }
@@ -62,6 +64,7 @@ class FirestoreService {
   static Future<void> initNewUser({
     required String firstName,
     required String lastName,
+    required String userName,
     required String email,
   }) async {
     final userDoc = _db.collection('users').doc(_uid);
@@ -73,6 +76,7 @@ class FirestoreService {
       'firstName': firstName,
       'lastName': lastName,
       'email': email,
+      'username': userName,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -86,8 +90,16 @@ class FirestoreService {
 
     // some default categories
     const defaults = [
-      {'name': 'Food', 'icon': Icons.fastfood, 'color': 0xFFe91e63},
-      {'name': 'Fashion', 'icon': Icons.shopping_bag, 'color': 0xFF2196f3},
+      {
+        'name': 'Food',
+        'icon': Icons.fastfood,
+        'color': 0xFFe91e63
+      },
+      {
+        'name': 'Fashion',
+        'icon': Icons.shopping_bag,
+        'color': 0xFF2196f3
+      },
     ];
     for (final cat in defaults) {
       final doc = userDoc.collection('categories').doc();
@@ -197,6 +209,30 @@ class FirestoreService {
       'financialGoals': goals,
     }, SetOptions(merge: true));
   }
+
+  /// If no financial goals exist, initialize them with [defaults].
+  /// Returns the stored or newly created goals.
+  static Future<List<Map<String, dynamic>>>
+  getOrCreateFinancialGoals(List<String> defaults) async {
+    final docRef = _db.collection('users').doc(_uid);
+    final doc = await docRef.get();
+    final data = doc.data() ?? {};
+    final goalsData = data['financialGoals'] as List<dynamic>?;
+
+    if (goalsData == null || goalsData.isEmpty) {
+      if (defaults.isEmpty) return [];
+      final newGoals = defaults.take(2).map((g) => {
+        'name': g,
+        'target': 0.0,
+        'saved': 0.0,
+      }).toList();
+      await docRef.set({'financialGoals': newGoals}, SetOptions(merge: true));
+      return newGoals;
+    }
+
+    return goalsData.map((g) => Map<String, dynamic>.from(g)).toList();
+  }
+
 
   // ──────────────────────────── SAVINGS ────────────────────────────
   static Future<void> addSavings({
