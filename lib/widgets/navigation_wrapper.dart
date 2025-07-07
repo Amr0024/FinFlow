@@ -85,22 +85,29 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
           MainScreen(
             selectedGoals: widget.selectedGoals,
             surveyResults: widget.surveyResults,
+            themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
           
           // Notes Screen
           NotesScreen(
             categories: _categories,
+            themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
           
           // Goals Screen
           FinancialGoalsScreen(
             colorScheme: currentTheme,
+            themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
           
           // Recommendations Screen
           RecommendationsScreen(
             categories: _categories,
             themeIndex: _selectedThemeIndex,
+            onThemeUpdated: _updateTheme,
           ),
         ],
       ),

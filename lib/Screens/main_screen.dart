@@ -14,15 +14,20 @@ import '../widgets/finflow_line_chart.dart';
 import 'financial_goals_screen.dart';
 import 'notifications_page.dart';
 import 'settings_page.dart';
+import 'charts_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final List<String> selectedGoals; // Selected financial goals
   final Map<String, dynamic> surveyResults; // Survey results
+  final int themeIndex;
+  final Function(int)? onThemeUpdated;
 
   const MainScreen({
     super.key,
     required this.selectedGoals,
     required this.surveyResults,
+    this.themeIndex = 0,
+    this.onThemeUpdated,
   });
 
   @override
@@ -55,7 +60,7 @@ class _MainScreenState extends State<MainScreen> {
   String _selectedFilter = 'All';
 
   // Theme management
-  int _selectedThemeIndex = 0; // Default to original theme
+  late int _selectedThemeIndex; // Will be initialized from widget.themeIndex
   bool _goalsBannerVisible = true;
 
   // Chart management
@@ -71,6 +76,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedThemeIndex = widget.themeIndex;
     _scrollController.addListener(_onScroll);
     _initDaysLeft();
 
@@ -273,6 +279,7 @@ class _MainScreenState extends State<MainScreen> {
                 setState(() {
                   _selectedThemeIndex = index;
                 });
+                widget.onThemeUpdated?.call(index);
                 Navigator.pop(context);
               },
             );
@@ -938,7 +945,17 @@ class _MainScreenState extends State<MainScreen> {
                           _currentTheme.primary,
                           _navigateToExpansesScreen,
                         ),
-                        _buildQuickActionButton(Icons.calendar_today, 'Monthly Plan', _currentTheme.secondary, _showMonthlyPlanDialog),
+                        _buildQuickActionButton(Icons.bar_chart, 'Charts', _currentTheme.secondary, () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ChartsScreen(
+                                themeIndex: _selectedThemeIndex,
+                                categories: _categories,
+                              ),
+                            ),
+                          );
+                        }),
                         _buildQuickActionButton(Icons.bar_chart, 'Reports', _currentTheme.tertiary, () {
                           Navigator.pushNamed(context, '/reports');
                         }),
@@ -1125,7 +1142,7 @@ class _MainScreenState extends State<MainScreen> {
                                     onPressed: () {
               Navigator.push(
                 context,
-                                        MaterialPageRoute(builder: (_) => NotificationsPage()),
+                                        MaterialPageRoute(builder: (_) => NotificationsPage(themeIndex: _selectedThemeIndex)),
                     );
                   },
                 ),
@@ -1139,6 +1156,7 @@ class _MainScreenState extends State<MainScreen> {
                                             currentThemeIndex: _selectedThemeIndex,
                                             onThemeChanged: (i) {
                                               setState(() => _selectedThemeIndex = i);
+                                              widget.onThemeUpdated?.call(i);
                                             },
                                           ),
                                         ),

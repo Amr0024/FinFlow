@@ -44,7 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = AppTheme.themes[_selectedThemeIndex];
     return Container(
       decoration: BoxDecoration(
         gradient: AppTheme.getPrimaryGradient(colorScheme),
