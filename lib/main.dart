@@ -36,7 +36,6 @@ void _connectToLocalEmulators() {
   final host = Platform.isAndroid ? '10.0.2.2' : 'localhost';
 
   FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
-
   FirebaseFirestore.instance.settings = const Settings(
     sslEnabled: false,
     persistenceEnabled: false,
@@ -66,7 +65,9 @@ class MyApp extends StatelessWidget {
       routes: {
         '/':       (context) => const SplashScreen(),
         '/survey': (context) => const SurveyScreen(),
-        '/ai-recos': (context) => const RecommendationsScreen(categories: [],),
+        '/ai-recos': (context) => RecommendationsScreen(categories: [], themeIndex: 0, onThemeUpdated: (newIndex) {
+          debugPrint('Theme change requested: $newIndex');
+        }),
       },
     );
   }

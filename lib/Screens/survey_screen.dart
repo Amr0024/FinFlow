@@ -150,7 +150,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
       MaterialPageRoute(
         builder: (context) => NavigationWrapper(
           selectedGoals: _selectedGoals.toList(),
-          surveyResults: _surveyResults, // Pass entire map
+          surveyResults: _surveyResults,// Pass entire map
         ),
       ),
     );
