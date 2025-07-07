@@ -4,7 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FinGPTApiService {
-  static const _baseUrl = 'https://fingpt-api-xxxxx-uc.a.run.app'; // <-- your URL
+  final String _baseUrl;
+
+  FinGPTApiService({String? baseUrl})
+      : _baseUrl = baseUrl ??
+      const String.fromEnvironment('FINGPT_API_URL',
+          defaultValue: 'http://localhost:8081');
 
   /// GET /
   Future<Map<String, dynamic>> health() async {
